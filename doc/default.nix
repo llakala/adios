@@ -1,10 +1,10 @@
 {
-  stdenv,
+  stdenvNoCC,
   __src ? ../.,
   mdbook,
 }:
 
-stdenv.mkDerivation {
+stdenvNoCC.mkDerivation {
   pname = "adios-nix-docs-html";
   version = "0.1";
   src = __src;
