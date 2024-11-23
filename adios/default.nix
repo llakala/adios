@@ -208,7 +208,10 @@ let
       inherit types interfaces;
       tests = import ./tests.nix { inherit adios lib; };
 
-      type = types.modules.module;
+      type = types.union [
+        types.modules.moduleDef
+        types.function
+      ];
 
       modules = {
         nix-unit = import ./modules/nix-unit.nix;

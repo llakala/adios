@@ -59,16 +59,15 @@ in
   # Check that the exported main module matches our type
   moduleTypes = {
     testAdios = {
-      expr = types.modules.loadedModule.verify adios;
+      expr = types.modules.module.verify adios;
       expected = null;
-
     };
 
     testTestModules = {
       expr = foldl' (
         acc: v:
         let
-          err = types.modules.loadedModule.verify v;
+          err = types.modules.module.verify v;
         in
         if acc != null then
           acc

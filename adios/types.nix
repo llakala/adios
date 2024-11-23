@@ -93,8 +93,8 @@ let
             types.modules.checks
           ])).verify;
 
-      module =
-        (struct "module" {
+      moduleDef =
+        (struct "moduleDef" {
           name = string;
           modules = optionalAttr (attrsOf module);
           types = optionalAttr typesT;
@@ -122,9 +122,9 @@ let
               );
           };
 
-      loadedModule = struct "loadedModule" {
+      module = struct "module" {
         name = string;
-        modules = attrsOf loadedModule;
+        modules = attrsOf module;
         types = typesT;
         interfaces = typesT;
         inherit options;
