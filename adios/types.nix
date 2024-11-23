@@ -100,9 +100,8 @@ let
           types = optionalAttr typesT;
           interfaces = optionalAttr (attrsOf type);
           impl = optionalAttr function;
-
+          checks = optionalAttr checks;
           tests = optionalAttr nixUnitTests;
-
           options = optionalAttr options;
           type = optionalAttr type;
 
@@ -125,6 +124,7 @@ let
       module = struct "module" {
         name = string;
         modules = attrsOf module;
+        inherit checks;
         types = typesT;
         interfaces = typesT;
         inherit options;
