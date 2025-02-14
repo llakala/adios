@@ -20,7 +20,6 @@
   };
 
   modules = {
-    nixos = import ./modules/nixos.nix;
     treefmt = import ./modules/treefmt {
       pkgs' = self.defaults.pkgs;
     };
