@@ -68,6 +68,38 @@ let
           value
     ) new;
 
+  computeDefaults =
+    args': options: defaults:
+    listToAttrs (
+      concatMap (
+        name:
+        let
+          option = options.${name};
+        in
+        if option ? defaultFunc then
+          (
+            if defaults ? ${name} then
+              [ ] # Explicitly passed, no need to compute
+            else
+              [
+                {
+                  # Compute value with args fixpoint
+                  inherit name;
+                  value = option.defaultFunc args';
+                }
+              ]
+          )
+        else if option ? options then
+          let
+            value = computeDefaults args' options.${name} (defaults.${name} or { });
+          in
+          # Only return an updated value if suboptions were actually computed anything
+          if value != { } then [ { inherit name value; } ] else [ ]
+        else
+          [ ]
+      ) (attrNames options)
+    );
+
   # Traverse options, throwing for every unset value
   throwUnsetDefaults =
     errorPrefix: options: defaults:
@@ -119,7 +151,7 @@ let
 
   # Apply one or more defaults to module.
   apply =
-    moduleDef: updates:
+    _defaults': moduleDef: updates:
     let
       # Call moduleDef with declared arguments
       args' = {
@@ -143,7 +175,18 @@ let
       impl' = def.impl;
       impl =
         if def ? impl then
-          (args: impl' (updateDefaults "while calling module '${mod.name}'" options mod.defaults args))
+          (
+            args:
+            let
+              # Concat provided args with statically defined defaults
+              defaults' = updateDefaults "while calling module '${mod.name}'" options defaults args;
+              # Compute dynamically defined defaults using defaultFunc
+              args' = updateDefaults "while calling module '${mod.name}'" options defaults' (
+                computeDefaults args' options defaults'
+              );
+            in
+            impl' args'
+          )
         else if def ? name then
           _: throw "Module '${def.name}' is not callable"
         else
@@ -153,7 +196,7 @@ let
       mod = {
         inherit (def) name;
 
-        apply = updates': apply moduleDef (updates // updates');
+        apply = updates': apply defaults moduleDef (updates // updates');
 
         modules = mapAttrs (_: load) (def.modules or { });
 
@@ -175,8 +218,15 @@ let
 
         inherit options;
 
-        # For composability reasons optionsToDefaults cannot construct throws on options with no defaults.
-        defaults = throwUnsetDefaults errorPrefix options defaults;
+        defaults =
+          let
+            # Compute dynamically defined defaults using defaultFunc
+            defaults' = updateDefaults "while computing defaults for module '${mod.name}'" options defaults (
+              computeDefaults defaults' options defaults
+            );
+          in
+          # For composability reasons optionsToDefaults cannot construct throws on options with no defaults.
+          throwUnsetDefaults errorPrefix options defaults';
 
         type =
           def.type or (
@@ -198,7 +248,7 @@ let
     else
       mod;
 
-  load = moduleDef: apply moduleDef { };
+  load = moduleDef: apply { } moduleDef { };
 
   interfaces = import ./interfaces.nix { inherit types; };
 

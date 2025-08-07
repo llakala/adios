@@ -52,6 +52,22 @@ let
       };
     };
 
+    withDependentOptions = _: {
+      name = "withDependentOption";
+      options = {
+        a = {
+          type = types.string;
+          default = "a";
+        };
+        b = {
+          type = types.string;
+          defaultFunc = args: "${args.a}-computed";
+        };
+      };
+      impl = args: {
+        inherit args;
+      };
+    };
   };
 
 in
@@ -154,6 +170,25 @@ in
         };
       };
       expected = null;
+    };
+  };
+
+  # Check that dependent options work
+  dependentOptions = {
+    testDependentDefault = {
+      expr = (testModules.withDependentOptions { }).args;
+      expected = {
+        a = "a";
+        b = "a-computed";
+      };
+    };
+
+    testDependentArg = {
+      expr = (testModules.withDependentOptions { a = "b"; }).args;
+      expected = {
+        a = "b";
+        b = "b-computed";
+      };
     };
   };
 }

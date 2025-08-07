@@ -67,11 +67,21 @@ let
             nixUnitTests
           ]).verify;
 
-      option = struct "option" {
-        inherit type;
-        default = optionalAttr any;
-        description = optionalAttr string;
-      };
+      option =
+        (struct "option" {
+          inherit type;
+          default = optionalAttr any;
+          defaultFunc = optionalAttr types.function;
+          description = optionalAttr string;
+        }).override
+          {
+            verify =
+              option:
+              if option ? default && option ? defaultFunc then
+                "'default' & 'defaultFunc' are mutually exclusive"
+              else
+                null;
+          };
 
       subOptions = struct "subOptions" {
         inherit options;
@@ -79,6 +89,7 @@ let
         # Make fields used for normal options non-permitted
         type = neverAttr;
         default = neverAttr;
+        defaultFunc = neverAttr;
       };
 
       options = attrsOf (union [
