@@ -151,7 +151,7 @@ let
 
   # Apply one or more defaults to module.
   apply =
-    _defaults': moduleDef: updates:
+    moduleDef: updates:
     let
       # Call moduleDef with declared arguments
       args' = {
@@ -196,7 +196,7 @@ let
       mod = {
         inherit (def) name;
 
-        apply = updates': apply defaults moduleDef (updates // updates');
+        apply = updates': apply moduleDef (updates // updates');
 
         modules = mapAttrs (_: load) (def.modules or { });
 
@@ -248,7 +248,7 @@ let
     else
       mod;
 
-  load = moduleDef: apply { } moduleDef { };
+  load = moduleDef: apply moduleDef { };
 
   interfaces = import ./interfaces.nix { inherit types; };
 
