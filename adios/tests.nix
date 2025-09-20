@@ -1,9 +1,8 @@
-{ adios, lib }:
+{ adios }:
 
 let
-  inherit (builtins) mapAttrs foldl';
+  inherit (builtins) mapAttrs foldl' attrValues;
   inherit (adios) types;
-  inherit (lib) mapAttrsToList;
 
   testModules = mapAttrs (_name: adios) {
 
@@ -91,7 +90,7 @@ in
           err
         else
           null
-      ) null (mapAttrsToList (_n: v: v) testModules);
+      ) null (attrValues testModules);
       expected = null;
     };
   };

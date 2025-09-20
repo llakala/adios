@@ -13,6 +13,8 @@ let
     concatMap
     isAttrs
     isFunction
+    typeOf
+    functionArgs
     ;
   inherit (types) struct;
 
@@ -160,7 +162,7 @@ let
       };
       def = moduleDef (
         mapAttrs (n: _: args'.${n} or (throw "Module takes argument '${n}' which is unknown")) (
-          lib.functionArgs moduleDef
+          functionArgs moduleDef
         )
       );
 
@@ -242,7 +244,7 @@ let
 
     in
     if !isFunction moduleDef then
-      throw "module definition is not a function"
+      throw "expected module definition to be of type 'function', was ${typeOf moduleDef}"
     else if !def ? name then
       throw "module definition missing name attribute"
     else
@@ -256,7 +258,7 @@ let
     (load (_: {
       name = "adios";
       inherit types interfaces;
-      tests = import ./tests.nix { inherit adios lib; };
+      tests = import ./tests.nix { inherit adios; };
 
       type = types.union [
         types.modules.moduleDef
