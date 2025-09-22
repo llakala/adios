@@ -11,7 +11,7 @@ pkgs.mkShell {
   packages = [
     pkgs.npins
     pkgs.nix-unit
-    dev.treefmt
+    # dev.treefmt
     pkgs.mdbook
   ];
 }

@@ -97,6 +97,18 @@ let
         modules.subOptions
       ]);
 
+      input = types.option (
+        attrsOf (
+          struct "input" {
+            inherit type;
+          }
+        )
+      );
+
+      inputs = attrsOf input;
+
+      lib = attrsOf types.any;
+
       checks =
         types.typedef' "checks"
           (attrsOf (union [
@@ -115,6 +127,8 @@ let
           tests = optionalAttr nixUnitTests;
           options = optionalAttr options;
           type = optionalAttr type;
+          inputs = optionalAttr inputs;
+          lib = optionalAttr lib;
 
           # Make fields created by module loading non-permitted in pre-loaded module
           # defaults = neverAttr;
@@ -142,6 +156,7 @@ let
         defaults = attrs;
         inherit type;
         tests = nixUnitTests;
+        inherit lib;
         __functor = function;
       };
 

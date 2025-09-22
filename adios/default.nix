@@ -100,19 +100,6 @@ let
       ) (attrNames options)
     );
 
-  # Traverse options, throwing for every unset value
-  throwUnsetDefaults =
-    errorPrefix: options: defaults:
-    mapAttrs (
-      name: option:
-      if option ? options then
-        throwUnsetDefaults "${errorPrefix} in option ${name}" option.options (
-          defaults.${name} or (throw "${errorPrefix}: option '${name}' is unset")
-        )
-      else
-        defaults.${name} or (throw "${errorPrefix}: option '${name}' is unset")
-    ) options;
-
   # Transform options into a concrete struct type
   optionsToType =
     name: options:
@@ -158,11 +145,17 @@ let
         inherit adios types;
         self = mod;
       };
-      def = moduleDef (
-        mapAttrs (n: _: args'.${n} or (throw "Module takes argument '${n}' which is unknown")) (
-          functionArgs moduleDef
-        )
-      );
+      def =
+        if isFunction moduleDef then
+          moduleDef (
+            mapAttrs (n: _: args'.${n} or (throw "Module takes argument '${n}' which is unknown")) (
+              functionArgs moduleDef
+            )
+          )
+        else if isAttrs moduleDef then
+          moduleDef
+        else
+          throw "expected module definition to be either of type 'function' or 'set', was ${typeOf moduleDef}";
 
       name' = def.name or "<anonymous>";
       name = types.string.check name' name';
@@ -172,26 +165,9 @@ let
       options' = checkOptionsType "${errorPrefix} options definition" (def.options or { });
 
       # Transform options into an attrset of default values
-      defaults = updateDefaults errorPrefix options' (optionsToDefaults errorPrefix options') updates;
-
-      # Wrap implementation with an options typechecker
-      impl' = def.impl;
-      impl =
-        if def ? impl then
-          (
-            args:
-            let
-              # Concat provided args with statically defined defaults
-              defaults' = updateDefaults "while calling module '${name}'" options' defaults args;
-              # Compute dynamically defined defaults using defaultFunc
-              args' = updateDefaults "while calling module '${name}'" options' defaults' (
-                computeDefaults args' options' defaults'
-              );
-            in
-            impl' args'
-          )
-        else
-          _: throw "Module '${name}' is not callable";
+      defaults =
+        updateDefaults errorPrefix options' (optionsToDefaults errorPrefix options')
+          updates.options;
 
       # The loaded module instance
       mod = {
@@ -199,7 +175,15 @@ let
 
         options = options';
 
-        apply = updates': apply moduleDef (updates // updates');
+        apply =
+          {
+            options ? { },
+            inputs ? { },
+          }:
+          apply moduleDef {
+            options = updates.options // options;
+            inputs = updates.inputs // inputs;
+          };
 
         modules = mapAttrs (_: load) (def.modules or { });
 
@@ -219,15 +203,66 @@ let
           def.tests or { }
         );
 
-        defaults =
+        inputs = checkAttrsOf "${errorPrefix}: while checking 'inputs'" types.modules.inputs (
+          def.inputs or { }
+        );
+
+        lib = checkAttrsOf "${errorPrefix}: while checking 'lib'" types.modules.lib (def.lib or { });
+
+        override =
+          newDef:
+          apply (
+            if isFunction newDef then
+              newDef def
+            else if isAttrs newDef then
+              newDef
+            else
+              throw "expected override module definition to be either of type 'function' or 'set', was ${typeOf newDef}"
+          ) updates;
+
+        # Given arguments options & inputs
+        args =
+          {
+            options ? { },
+            inputs ? { },
+          }:
           let
-            # Compute dynamically defined defaults using defaultFunc
-            defaults' = updateDefaults "while computing defaults for module '${name}'" options' defaults (
-              computeDefaults defaults' options' defaults
-            );
+            # Concat provided args with statically defined defaults
+            defaults' = updateDefaults "${errorPrefix}: while computing options" options' defaults options;
+            inputs' = updates.inputs // inputs;
+
+            self = {
+              # Compute dynamically defined defaults using defaultFunc
+              options = updateDefaults "${errorPrefix}: while computing options" options' defaults' (
+                computeDefaults self options' defaults'
+              );
+
+              # Create a narrowed type checked view of inputs
+              inputs = mapAttrs (
+                name: fields:
+                if fields == null then
+                  inputs'.${name}
+                else
+                  (
+                    let
+                      input = inputs'.${name};
+                    in
+                    mapAttrs (
+                      fieldName: field:
+                      let
+                        value = input.${fieldName};
+                        err = field.type.verify value;
+                      in
+                      if err == null then
+                        value
+                      else
+                        throw "${errorPrefix}: while computing 'inputs.${name}.${fieldName}': ${err}"
+                    ) fields
+                  )
+              ) mod.inputs;
+            };
           in
-          # For composability reasons optionsToDefaults cannot construct throws on options with no defaults.
-          throwUnsetDefaults errorPrefix options' defaults';
+          self;
 
         type =
           def.type or (
@@ -237,17 +272,34 @@ let
             else
               types.never
           );
-
-        __functor = _: impl;
-      };
-
+      }
+      // (
+        if def ? impl then
+          {
+            __functor =
+              self:
+              {
+                options ? { },
+                inputs ? { },
+                __checked ? false,
+              }:
+              def.impl (
+                # If the value is already checked, skip checking it again.
+                if !__checked then self.args { inherit options inputs; } else { inherit options inputs; }
+              );
+          }
+        else
+          { }
+      );
     in
-    if !isFunction moduleDef then
-      throw "expected module definition to be of type 'function', was ${typeOf moduleDef}"
-    else
-      mod;
+    mod;
 
-  load = moduleDef: apply moduleDef { };
+  load =
+    moduleDef:
+    apply moduleDef {
+      options = { };
+      inputs = { };
+    };
 
   interfaces = import ./interfaces.nix { inherit types; };
 
@@ -261,6 +313,8 @@ let
         types.modules.moduleDef
         types.function
       ];
+
+      lib = import ./lib.nix;
 
       modules = {
         nix-unit = import ./modules/nix-unit.nix;
