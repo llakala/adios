@@ -34,7 +34,6 @@ let
               value =
                 if err != null then "${errorPrefix}: in option '${name}': type error ${err}" else option.default;
               err = option.type.verify option.default;
-
             }
           ]
         else if option ? options then
