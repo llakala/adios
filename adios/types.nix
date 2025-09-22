@@ -106,7 +106,7 @@ let
 
       moduleDef =
         (struct "moduleDef" {
-          name = string;
+          name = optionalAttr string;
           modules = optionalAttr (attrsOf module);
           types = optionalAttr typesT;
           interfaces = optionalAttr (attrsOf type);

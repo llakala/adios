@@ -165,7 +165,10 @@ let
         )
       );
 
-      errorPrefix = "in module '${mod.name}'";
+      name' = def.name or "<anonymous>";
+      name = types.string.check name' name';
+
+      errorPrefix = "in module '${name}'";
 
       options = checkOptionsType "${errorPrefix} options definition" (def.options or { });
 
@@ -180,22 +183,20 @@ let
             args:
             let
               # Concat provided args with statically defined defaults
-              defaults' = updateDefaults "while calling module '${mod.name}'" options defaults args;
+              defaults' = updateDefaults "while calling module '${name}'" options defaults args;
               # Compute dynamically defined defaults using defaultFunc
-              args' = updateDefaults "while calling module '${mod.name}'" options defaults' (
+              args' = updateDefaults "while calling module '${name}'" options defaults' (
                 computeDefaults args' options defaults'
               );
             in
             impl' args'
           )
-        else if def ? name then
-          _: throw "Module '${def.name}' is not callable"
         else
-          _: throw "Module is not callable";
+          _: throw "Module '${name}' is not callable";
 
       # The loaded module instance
       mod = {
-        inherit (def) name;
+        inherit name options;
 
         apply = updates': apply moduleDef (updates // updates');
 
@@ -217,12 +218,10 @@ let
           def.tests or { }
         );
 
-        inherit options;
-
         defaults =
           let
             # Compute dynamically defined defaults using defaultFunc
-            defaults' = updateDefaults "while computing defaults for module '${mod.name}'" options defaults (
+            defaults' = updateDefaults "while computing defaults for module '${name}'" options defaults (
               computeDefaults defaults' options defaults
             );
           in
@@ -233,7 +232,7 @@ let
           def.type or (
             if def ? options then
               # Transform options into a struct type
-              optionsToType def.name options
+              optionsToType name options
             else
               types.never
           );
@@ -244,8 +243,6 @@ let
     in
     if !isFunction moduleDef then
       throw "expected module definition to be of type 'function', was ${typeOf moduleDef}"
-    else if !def ? name then
-      throw "module definition missing name attribute"
     else
       mod;
 
