@@ -121,11 +121,11 @@ let
         }).override
           {
             verify =
-              module:
+              self:
               (
-                if module ? type && module ? options then
+                if self ? type && self ? options then
                   "'type' is mutually exclusive with 'options'"
-                else if module ? options && !(module ? impl) then
+                else if self ? options && !(self ? impl) then
                   "has 'options' but no 'impl' provided"
                 else
                   null
