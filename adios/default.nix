@@ -170,10 +170,10 @@ let
 
       errorPrefix = "in module '${name}'";
 
-      options = checkOptionsType "${errorPrefix} options definition" (def.options or { });
+      options' = checkOptionsType "${errorPrefix} options definition" (def.options or { });
 
       # Transform options into an attrset of default values
-      defaults = updateDefaults errorPrefix options (optionsToDefaults errorPrefix options) updates;
+      defaults = updateDefaults errorPrefix options' (optionsToDefaults errorPrefix options') updates;
 
       # Wrap implementation with an options typechecker
       impl' = def.impl;
@@ -183,10 +183,10 @@ let
             args:
             let
               # Concat provided args with statically defined defaults
-              defaults' = updateDefaults "while calling module '${name}'" options defaults args;
+              defaults' = updateDefaults "while calling module '${name}'" options' defaults args;
               # Compute dynamically defined defaults using defaultFunc
-              args' = updateDefaults "while calling module '${name}'" options defaults' (
-                computeDefaults args' options defaults'
+              args' = updateDefaults "while calling module '${name}'" options' defaults' (
+                computeDefaults args' options' defaults'
               );
             in
             impl' args'
@@ -196,7 +196,9 @@ let
 
       # The loaded module instance
       mod = {
-        inherit name options;
+        inherit name;
+
+        options = options';
 
         apply = updates': apply moduleDef (updates // updates');
 
@@ -221,18 +223,18 @@ let
         defaults =
           let
             # Compute dynamically defined defaults using defaultFunc
-            defaults' = updateDefaults "while computing defaults for module '${name}'" options defaults (
-              computeDefaults defaults' options defaults
+            defaults' = updateDefaults "while computing defaults for module '${name}'" options' defaults (
+              computeDefaults defaults' options' defaults
             );
           in
           # For composability reasons optionsToDefaults cannot construct throws on options with no defaults.
-          throwUnsetDefaults errorPrefix options defaults';
+          throwUnsetDefaults errorPrefix options' defaults';
 
         type =
           def.type or (
             if def ? options then
               # Transform options into a struct type
-              optionsToType name options
+              optionsToType name options'
             else
               types.never
           );
