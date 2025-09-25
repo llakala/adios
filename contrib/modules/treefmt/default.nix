@@ -3,20 +3,10 @@
 }:
 {
   adios,
-  lib,
   self,
   ...
 }:
 let
-  inherit (lib)
-    nameValuePair
-    removeSuffix
-    groupBy
-    mapAttrs
-    head
-    length
-    throwIf
-    ;
   inherit (adios) types;
 
 in
@@ -24,15 +14,11 @@ in
 {
   name = "treefmt";
 
-  modules =
-    let
-      args = {
-        inherit (self.defaults) pkgs;
-      };
-    in
-    lib.mapAttrs' (n: _v: nameValuePair (removeSuffix ".nix" n) (import (./modules + "/${n}") args)) (
-      builtins.readDir ./modules
-    );
+  modules = {
+    nixfmt = import ./modules/nixfmt.nix { inherit (self.defaults) pkgs; };
+    statix = import ./modules/statix.nix { inherit (self.defaults) pkgs; };
+    deadnix = import ./modules/deadnix.nix { inherit (self.defaults) pkgs; };
+  };
 
   checks =
     let
@@ -119,6 +105,15 @@ in
     options:
     let
       inherit (options) pkgs;
+      inherit (pkgs) lib;
+      inherit (lib)
+        groupBy
+        mapAttrs
+        head
+        length
+        throwIf
+        getExe
+        ;
 
       config = {
         formatter = mapAttrs (
@@ -152,7 +147,7 @@ in
             #!${pkgs.runtimeShell}
             set -euo pipefail
             unset PRJ_ROOT
-            exec ${lib.getExe options.package} \
+            exec ${getExe options.package} \
               --config-file=${configFile} \
               --tree-root-file=${options.projectRootFile} \
               "\$@"

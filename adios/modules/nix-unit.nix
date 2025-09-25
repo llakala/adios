@@ -1,6 +1,5 @@
 {
   types,
-  lib,
   adios,
 }:
 
@@ -11,7 +10,7 @@ let
     length
     head
     ;
-  inherit (lib) throwIf;
+  throwIf = cond: msg: if cond then throw msg else x: x;
 
   # Subset of the module type
   testedModule = types.struct "testedModule" {

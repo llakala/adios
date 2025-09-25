@@ -1,8 +1,7 @@
 {
   __sources ? import ../npins,
   pkgs ? import __sources.nixpkgs { },
-  lib ? pkgs.lib,
-  adios' ? import ../. { inherit lib; },
+  adios' ? import ../. { },
   adios ? adios'.adios,
   adios-contrib ? adios'.adios-contrib,
 }:

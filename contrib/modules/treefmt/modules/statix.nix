@@ -1,7 +1,6 @@
 { pkgs }:
 {
   types,
-  lib,
   ...
 }:
 {
@@ -24,7 +23,7 @@
     treefmt = {
       command =
         let
-          cmd = lib.getExe options.package;
+          cmd = pkgs.lib.getExe options.package;
 
           # statix requires its configuration file to be named statix.toml exactly
           # See: https://github.com/nerdypepper/statix/pull/54

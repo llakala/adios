@@ -1,7 +1,6 @@
 { pkgs }:
 {
   types,
-  lib,
   ...
 }:
 {
@@ -17,7 +16,7 @@
   impl = options: {
     name = "nixfmt";
     treefmt = {
-      command = lib.getExe options.package;
+      command = pkgs.lib.getExe options.package;
       includes = [ "*.nix" ];
     };
   };

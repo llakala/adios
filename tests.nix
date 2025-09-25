@@ -1,10 +1,9 @@
 {
   __sources ? import ./npins,
   pkgs ? import __sources.nixpkgs { },
-  lib ? pkgs.lib,
 }:
 let
-  adios' = import ./. { inherit lib; };
+  adios' = import ./. { };
   inherit (adios') adios adios-contrib;
 in
 (adios.modules.nix-unit {

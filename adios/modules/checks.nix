@@ -1,6 +1,5 @@
 {
   types,
-  lib,
   adios,
 }:
 
@@ -16,7 +15,9 @@ let
     listToAttrs
     typeOf
     ;
-  inherit (lib) throwIf isDerivation;
+
+  isDerivation = value: isAttrs value && value.type or null == "derivation";
+  throwIf = cond: msg: if cond then throw msg else x: x;
 
   # Subset of the module type
   checkedModule = types.struct "checkedModule" {

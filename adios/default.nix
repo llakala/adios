@@ -1,6 +1,5 @@
 {
   korora,
-  lib,
 }:
 
 let
@@ -156,7 +155,7 @@ let
     let
       # Call moduleDef with declared arguments
       args' = {
-        inherit adios lib types;
+        inherit adios types;
         self = mod;
       };
       def = moduleDef (

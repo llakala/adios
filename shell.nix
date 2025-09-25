@@ -4,8 +4,7 @@
 }:
 
 let
-  inherit (pkgs) lib;
-  dev = import ./dev { inherit __sources pkgs lib; };
+  dev = import ./dev { inherit __sources pkgs; };
 
 in
 pkgs.mkShell {

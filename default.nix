@@ -1,10 +1,9 @@
 {
-  lib,
-  korora ? import (import ./npins).korora { inherit lib; },
+  korora ? import (import ./npins).korora { },
 }:
 let
   self = {
-    adios = import ./adios { inherit korora lib; };
+    adios = import ./adios { inherit korora; };
     adios-contrib = self.adios (import ./contrib);
   };
 in
