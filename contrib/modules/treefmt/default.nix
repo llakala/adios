@@ -10,7 +10,7 @@ in
 
   modules = {
     nixfmt = import ./modules/nixfmt.nix { inherit adios getExe; };
-    statix = import ./modules/statix.nix { inherit adios getExe; };
+    statix = import ./modules/statix.nix { inherit adios; };
     deadnix = import ./modules/deadnix.nix { inherit adios getExe; };
   };
 

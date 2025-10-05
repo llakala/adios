@@ -1,4 +1,4 @@
-{ getExe, adios }:
+{ adios }:
 let
   inherit (adios) types;
 in
