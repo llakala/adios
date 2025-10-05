@@ -17,28 +17,6 @@ in
     deadnix = import ./modules/deadnix.nix { inherit getExe; };
   };
 
-  # checks =
-  #   let
-  #     inherit (self.defaults) pkgs;
-  #     treefmt = self;
-  #   in
-  #   {
-  #     # Build wrapper
-  #     wrapper =
-  #       pkgs.runCommand "treefmt-wrapper"
-  #         {
-  #           nativeBuildInputs = [
-  #             (treefmt {
-  #               projectRootFile = ".gitignore";
-  #             }).package
-  #           ];
-  #         }
-  #         ''
-  #           treefmt --help
-  #           mkdir $out
-  #         '';
-  #   };
-
   options = {
     formatters = {
       type = types.listOf (

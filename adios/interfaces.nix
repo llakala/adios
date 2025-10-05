@@ -32,12 +32,6 @@ in
   );
 
   /*
-    A tree of derivation for testing
-    .
-  */
-  inherit (types.modules) checks;
-
-  /*
     A derivation
     .
   */

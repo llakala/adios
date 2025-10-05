@@ -198,10 +198,6 @@ let
           def.interfaces or { }
         );
 
-        checks = checkAttrsOf "${errorPrefix}: while checking 'checks'" types.derivation (
-          def.checks or { }
-        );
-
         tests = checkAttrsOf "${errorPrefix}: while checking 'tests'" types.modules.nixUnitTest (
           def.tests or { }
         );
@@ -241,7 +237,6 @@ let
 
       modules = {
         nix-unit = import ./modules/nix-unit.nix;
-        checks = import ./modules/checks.nix;
       };
     }))
     // {
