@@ -14,37 +14,6 @@ let
     modules
     ;
 
-  nixUnitTest' =
-    (struct "nixUnitTest" {
-      expr = types.any;
-
-      expected = optionalAttr types.any;
-      expectedError = optionalAttr (
-        (struct "expectedError" {
-          type = optionalAttr string;
-          msg = optionalAttr string;
-        }).override
-          {
-            verify =
-              expectedError:
-              if !(expectedError ? type) && !(expectedError ? msg) then
-                "requires either attribute type or msg"
-              else
-                null;
-          }
-      );
-    }).override
-      {
-        verify =
-          test:
-          if !(test ? expected) && !(test ? expectedError) then
-            "requires either attribute expected or expectedError"
-          else
-            null;
-      };
-
-  nixUnitTests = attrsOf types.modules.nixUnitTest;
-
   neverAttr = optionalAttr never;
 
   typesT = attrsOf modules.typedef;
@@ -57,13 +26,6 @@ let
             function
             type
             typesT
-          ]).verify;
-
-      nixUnitTest =
-        types.typedef' "nixUnitTests"
-          (union [
-            nixUnitTest'
-            nixUnitTests
           ]).verify;
 
       option =
@@ -103,7 +65,6 @@ let
           types = optionalAttr typesT;
           interfaces = optionalAttr (attrsOf type);
           impl = optionalAttr function;
-          tests = optionalAttr nixUnitTests;
           options = optionalAttr options;
           type = optionalAttr type;
         }).override
@@ -127,7 +88,6 @@ let
         interfaces = typesT;
         inherit options;
         inherit type;
-        tests = nixUnitTests;
         __functor = function;
       };
 

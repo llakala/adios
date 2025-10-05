@@ -2,7 +2,6 @@
   __sources ? import ../npins,
   pkgs ? import __sources.nixpkgs { },
   adios' ? import ../. { },
-  adios ? adios'.adios,
   adios-contrib ? adios'.adios-contrib,
 }:
 
@@ -31,8 +30,6 @@ in
         })
       ];
     }).package;
-
-  inherit (adios) tests;
 
   doc = callPackage ../doc { };
 

@@ -198,10 +198,6 @@ let
           def.interfaces or { }
         );
 
-        tests = checkAttrsOf "${errorPrefix}: while checking 'tests'" types.modules.nixUnitTest (
-          def.tests or { }
-        );
-
         type =
           def.type or (
             if def ? options then
@@ -228,7 +224,6 @@ let
     (load (_: {
       name = "adios";
       inherit types interfaces;
-      tests = import ./tests.nix { inherit adios; };
 
       type = types.union [
         types.modules.moduleDef

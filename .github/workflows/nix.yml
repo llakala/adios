@@ -12,18 +12,6 @@ permissions:
   id-token: write
 
 jobs:
-  nix-unit:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v30
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: nix-unit
-        run: nix-shell --run "nix-unit ./tests.nix"
-
   build-pages:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
