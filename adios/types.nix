@@ -66,7 +66,6 @@ let
           interfaces = optionalAttr (attrsOf type);
           impl = optionalAttr function;
           options = optionalAttr options;
-          type = optionalAttr type;
         }).override
           {
             verify =

@@ -12,7 +12,6 @@ let
     concatMap
     isAttrs
     ;
-  inherit (types) struct;
 
   optionalAttrs = cond: attrs: if cond then attrs else { };
 
@@ -99,15 +98,6 @@ let
       ) (attrNames options)
     );
 
-  # Transform options into a concrete struct type
-  optionsToType =
-    name: options:
-    struct name (
-      mapAttrs (
-        name: option: if option ? options then optionsToType name option.options else option.type
-      ) options
-    );
-
   # Lazy typecheck options
   checkOptionsType =
     errorPrefix: options:
@@ -166,16 +156,6 @@ let
         interfaces = checkAttrsOf "${errorPrefix}: while checking 'interfaces'" types.modules.typedef (
           def.interfaces or { }
         );
-
-        type =
-          def.type or (
-            if def ? options then
-              # Transform options into a struct type
-              optionsToType name options'
-            else
-              types.never
-          );
-
       }
       // (optionalAttrs (def ? impl) {
         # Wrap implementation with an options typechecker
@@ -203,11 +183,6 @@ let
     (load {
       name = "adios";
       inherit types interfaces;
-
-      type = types.union [
-        types.modules.moduleDef
-        types.function
-      ];
 
       modules = {
         nix-unit = import ./modules/nix-unit.nix;
