@@ -1,14 +1,10 @@
-{ getExe }:
-{
-  types,
-  ...
-}:
+{ adios, getExe }:
 {
   name = "treefmt-deadnix";
 
   options = {
     package = {
-      type = types.derivation;
+      type = adios.types.derivation;
       # default = pkgs.deadnix;
     };
   };

@@ -11,11 +11,10 @@ let
     mapAttrs
     concatMap
     isAttrs
-    isFunction
-    typeOf
-    functionArgs
     ;
   inherit (types) struct;
+
+  optionalAttrs = cond: attrs: if cond then attrs else { };
 
   # Transform options into a default value attrset
   optionsToDefaults =
@@ -138,18 +137,8 @@ let
 
   # Apply one or more defaults to module.
   apply =
-    moduleDef: updates:
+    def: updates:
     let
-      # Call moduleDef with declared arguments
-      args' = {
-        inherit adios types;
-      };
-      def = moduleDef (
-        mapAttrs (n: _: args'.${n} or (throw "Module takes argument '${n}' which is unknown")) (
-          functionArgs moduleDef
-        )
-      );
-
       name' = def.name or "<anonymous>";
       name = types.string.check name' name';
 
@@ -160,32 +149,13 @@ let
       # Transform options into an attrset of default values
       defaults = updateDefaults errorPrefix options' (optionsToDefaults errorPrefix options') updates;
 
-      # Wrap implementation with an options typechecker
-      impl' = def.impl;
-      impl =
-        if def ? impl then
-          (
-            args:
-            let
-              # Concat provided args with statically defined defaults
-              defaults' = updateDefaults "while calling module '${name}'" options' defaults args;
-              # Compute dynamically defined defaults using defaultFunc
-              args' = updateDefaults "while calling module '${name}'" options' defaults' (
-                computeDefaults args' options' defaults'
-              );
-            in
-            impl' args'
-          )
-        else
-          _: throw "Module '${name}' is not callable";
-
       # The loaded module instance
       mod = {
         inherit name;
 
         options = options';
 
-        apply = updates': apply moduleDef (updates // updates');
+        apply = updates': apply def (updates // updates');
 
         modules = mapAttrs (_: load) (def.modules or { });
 
@@ -206,21 +176,31 @@ let
               types.never
           );
 
-        __functor = _: impl;
-      };
+      }
+      // (optionalAttrs (def ? impl) {
+        # Wrap implementation with an options typechecker
+        __functor =
+          _: args:
+          let
+            # Concat provided args with statically defined defaults
+            defaults' = updateDefaults "while calling module '${name}'" options' defaults args;
+            # Compute dynamically defined defaults using defaultFunc
+            args' = updateDefaults "while calling module '${name}'" options' defaults' (
+              computeDefaults args' options' defaults'
+            );
+          in
+          def.impl args';
+      });
 
     in
-    if !isFunction moduleDef then
-      throw "expected module definition to be of type 'function', was ${typeOf moduleDef}"
-    else
-      mod;
+    mod;
 
   load = moduleDef: apply moduleDef { };
 
   interfaces = import ./interfaces.nix { inherit types; };
 
   adios =
-    (load (_: {
+    (load {
       name = "adios";
       inherit types interfaces;
 
@@ -232,7 +212,7 @@ let
       modules = {
         nix-unit = import ./modules/nix-unit.nix;
       };
-    }))
+    })
     // {
       # Overwrite default functor with one that _does not_ do type checking.
       # `load` does it's own type checking.

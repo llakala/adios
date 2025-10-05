@@ -1,8 +1,7 @@
-{ getExe }:
-{
-  types,
-  ...
-}:
+{ getExe, adios }:
+let
+  inherit (adios) types;
+in
 {
   name = "treefmt-statix";
 

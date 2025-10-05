@@ -1,7 +1,4 @@
-{
-  adios,
-  ...
-}:
+{ adios }:
 let
   inherit (adios) types;
   getExe = x: "${x}/bin/${x.meta.mainProgram or (throw "missing meta.mainProgram")}";
@@ -12,9 +9,9 @@ in
   name = "treefmt";
 
   modules = {
-    nixfmt = import ./modules/nixfmt.nix { inherit getExe; };
-    statix = import ./modules/statix.nix { inherit getExe; };
-    deadnix = import ./modules/deadnix.nix { inherit getExe; };
+    nixfmt = import ./modules/nixfmt.nix { inherit adios getExe; };
+    statix = import ./modules/statix.nix { inherit adios getExe; };
+    deadnix = import ./modules/deadnix.nix { inherit adios getExe; };
   };
 
   options = {
