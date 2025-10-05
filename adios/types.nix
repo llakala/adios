@@ -11,7 +11,6 @@ let
     function
     type
     any
-    attrs
     modules
     ;
 
@@ -115,9 +114,6 @@ let
           tests = optionalAttr nixUnitTests;
           options = optionalAttr options;
           type = optionalAttr type;
-
-          # Make fields created by module loading non-permitted in pre-loaded module
-          # defaults = neverAttr;
         }).override
           {
             verify =
@@ -139,7 +135,6 @@ let
         types = typesT;
         interfaces = typesT;
         inherit options;
-        defaults = attrs;
         inherit type;
         tests = nixUnitTests;
         __functor = function;

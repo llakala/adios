@@ -1,4 +1,4 @@
-{ pkgs }:
+{ getExe }:
 {
   types,
   ...
@@ -9,14 +9,14 @@
   options = {
     package = {
       type = types.derivation;
-      default = pkgs.nixfmt-rfc-style;
+      # default = pkgs.nixfmt-rfc-style;
     };
   };
 
   impl = options: {
     name = "nixfmt";
     treefmt = {
-      command = pkgs.lib.getExe options.package;
+      command = getExe options.package;
       includes = [ "*.nix" ];
     };
   };

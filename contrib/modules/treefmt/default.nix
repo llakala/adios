@@ -1,13 +1,10 @@
 {
-  pkgs',
-}:
-{
   adios,
-  self,
   ...
 }:
 let
   inherit (adios) types;
+  getExe = x: "${x}/bin/${x.meta.mainProgram or (throw "missing meta.mainProgram")}";
 
 in
 
@@ -15,32 +12,32 @@ in
   name = "treefmt";
 
   modules = {
-    nixfmt = import ./modules/nixfmt.nix { inherit (self.defaults) pkgs; };
-    statix = import ./modules/statix.nix { inherit (self.defaults) pkgs; };
-    deadnix = import ./modules/deadnix.nix { inherit (self.defaults) pkgs; };
+    nixfmt = import ./modules/nixfmt.nix { inherit getExe; };
+    statix = import ./modules/statix.nix { inherit getExe; };
+    deadnix = import ./modules/deadnix.nix { inherit getExe; };
   };
 
-  checks =
-    let
-      inherit (self.defaults) pkgs;
-      treefmt = self;
-    in
-    {
-      # Build wrapper
-      wrapper =
-        pkgs.runCommand "treefmt-wrapper"
-          {
-            nativeBuildInputs = [
-              (treefmt {
-                projectRootFile = ".gitignore";
-              }).package
-            ];
-          }
-          ''
-            treefmt --help
-            mkdir $out
-          '';
-    };
+  # checks =
+  #   let
+  #     inherit (self.defaults) pkgs;
+  #     treefmt = self;
+  #   in
+  #   {
+  #     # Build wrapper
+  #     wrapper =
+  #       pkgs.runCommand "treefmt-wrapper"
+  #         {
+  #           nativeBuildInputs = [
+  #             (treefmt {
+  #               projectRootFile = ".gitignore";
+  #             }).package
+  #           ];
+  #         }
+  #         ''
+  #           treefmt --help
+  #           mkdir $out
+  #         '';
+  #   };
 
   options = {
     formatters = {
@@ -68,12 +65,11 @@ in
 
     package = {
       type = types.derivation;
-      default = self.defaults.pkgs.treefmt;
+      defaultFunc = options: options.pkgs.treefmt;
     };
 
     pkgs = {
       type = types.attrs;
-      default = pkgs';
     };
 
     excludes = {

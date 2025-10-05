@@ -100,19 +100,6 @@ let
       ) (attrNames options)
     );
 
-  # Traverse options, throwing for every unset value
-  throwUnsetDefaults =
-    errorPrefix: options: defaults:
-    mapAttrs (
-      name: option:
-      if option ? options then
-        throwUnsetDefaults "${errorPrefix} in option ${name}" option.options (
-          defaults.${name} or (throw "${errorPrefix}: option '${name}' is unset")
-        )
-      else
-        defaults.${name} or (throw "${errorPrefix}: option '${name}' is unset")
-    ) options;
-
   # Transform options into a concrete struct type
   optionsToType =
     name: options:
@@ -218,16 +205,6 @@ let
         tests = checkAttrsOf "${errorPrefix}: while checking 'tests'" types.modules.nixUnitTest (
           def.tests or { }
         );
-
-        defaults =
-          let
-            # Compute dynamically defined defaults using defaultFunc
-            defaults' = updateDefaults "while computing defaults for module '${name}'" options' defaults (
-              computeDefaults defaults' options' defaults
-            );
-          in
-          # For composability reasons optionsToDefaults cannot construct throws on options with no defaults.
-          throwUnsetDefaults errorPrefix options' defaults';
 
         type =
           def.type or (

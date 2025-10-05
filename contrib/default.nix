@@ -20,8 +20,6 @@
   };
 
   modules = {
-    treefmt = import ./modules/treefmt {
-      pkgs' = self.defaults.pkgs;
-    };
+    treefmt = import ./modules/treefmt;
   };
 }

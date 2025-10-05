@@ -19,9 +19,16 @@ in
     (treefmt {
       projectRootFile = "flake.nix";
       formatters = [
-        (fmts.nixfmt { })
-        (fmts.deadnix { })
-        (fmts.statix { })
+        (fmts.nixfmt {
+          package = pkgs.nixfmt-rfc-style;
+        })
+        (fmts.deadnix {
+          package = pkgs.deadnix;
+        })
+        (fmts.statix {
+          package = pkgs.statix;
+          inherit pkgs;
+        })
       ];
     }).package;
 

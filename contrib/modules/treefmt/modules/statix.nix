@@ -1,4 +1,4 @@
-{ pkgs }:
+{ getExe }:
 {
   types,
   ...
@@ -9,7 +9,11 @@
   options = {
     package = {
       type = types.derivation;
-      default = pkgs.statix;
+      # default = pkgs.statix;
+    };
+
+    pkgs = {
+      type = types.attrs;
     };
 
     disabled-lints = {
@@ -23,6 +27,7 @@
     treefmt = {
       command =
         let
+          inherit (options) pkgs;
           cmd = pkgs.lib.getExe options.package;
 
           # statix requires its configuration file to be named statix.toml exactly

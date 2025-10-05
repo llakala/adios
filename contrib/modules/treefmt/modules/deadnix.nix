@@ -1,4 +1,4 @@
-{ pkgs }:
+{ getExe }:
 {
   types,
   ...
@@ -9,14 +9,14 @@
   options = {
     package = {
       type = types.derivation;
-      default = pkgs.deadnix;
+      # default = pkgs.deadnix;
     };
   };
 
   impl = options: {
     name = "deadnix";
     treefmt = {
-      command = pkgs.lib.getExe options.package;
+      command = getExe options.package;
       options = [ "--edit" ];
       includes = [ "*.nix" ];
     };
