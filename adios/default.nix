@@ -134,14 +134,9 @@ let
 
       errorPrefix = "in module '${name}'";
 
-      options' = checkOptionsType "${errorPrefix} options definition" (def.options or { });
-
-      # Transform options into an attrset of default values
-      defaults = updateDefaults errorPrefix options' (optionsToDefaults errorPrefix options') updates;
-
       # The loaded module instance
       mod = {
-        options = options';
+        options = checkOptionsType "${errorPrefix} options definition" (def.options or { });
 
         apply = updates': apply def (updates // updates');
 
@@ -161,13 +156,19 @@ let
       // (optionalAttrs (def ? impl) {
         # Wrap implementation with an options typechecker
         __functor =
-          _: args:
+          self: args:
           let
+            # Transform options into an attrset of default values
+            defaults =
+              updateDefaults errorPrefix self.options (optionsToDefaults errorPrefix self.options)
+                updates;
+
             # Concat provided args with statically defined defaults
-            defaults' = updateDefaults "while calling module '${name}'" options' defaults args;
+            defaults' = updateDefaults "while calling module '${name}'" self.options defaults args;
+
             # Compute dynamically defined defaults using defaultFunc
-            args' = updateDefaults "while calling module '${name}'" options' defaults' (
-              computeDefaults args' options' defaults'
+            args' = updateDefaults "while calling module '${name}'" self.options defaults' (
+              computeDefaults args' self.options defaults'
             );
           in
           def.impl args';
