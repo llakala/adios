@@ -136,7 +136,7 @@ let
         );
       }
       // (optionalAttrs (def ? name) {
-        inherit (def) name;
+        name = checkType "${errorPrefix}: while checking 'name'" types.string def.name;
       })
       // (optionalAttrs (def ? impl) {
         # Wrap implementation with an options typechecker
