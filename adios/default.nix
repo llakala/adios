@@ -104,6 +104,14 @@ let
     else
       throw "${errorPrefix}: in attr: ${err}";
 
+  checkType =
+    errorPrefix: type: value:
+    let
+      err = type.verify value;
+    in
+      if err == null then value
+      else throw "${errorPrefix}: ${err}";
+
   load =
     def:
     let
@@ -117,17 +125,7 @@ let
 
         modules = mapAttrs (_: load) (def.modules or { });
 
-        lib =
-          if def ? lib then
-            (
-              let
-                type = types.modules.lib;
-                err = type.verify def.lib;
-              in
-              if err != null then (throw "${errorPrefix}: while checking 'lib': ${err}") else def.lib
-            )
-          else
-            { };
+        lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib (def.lib or { });
 
         types = checkAttrsOf "${errorPrefix}: while checking 'types'" types.modules.typedef (
           def.types or { }
