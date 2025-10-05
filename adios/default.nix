@@ -143,7 +143,6 @@ let
       # Call moduleDef with declared arguments
       args' = {
         inherit adios types;
-        self = mod;
       };
       def = moduleDef (
         mapAttrs (n: _: args'.${n} or (throw "Module takes argument '${n}' which is unknown")) (
