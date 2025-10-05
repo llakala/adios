@@ -1,7 +1,6 @@
 { adios }:
 let
   inherit (adios) types;
-  getExe = x: "${x}/bin/${x.meta.mainProgram or (throw "missing meta.mainProgram")}";
 
 in
 
@@ -9,9 +8,9 @@ in
   name = "treefmt";
 
   modules = {
-    nixfmt = import ./modules/nixfmt.nix { inherit adios getExe; };
+    nixfmt = import ./modules/nixfmt.nix { inherit adios; };
     statix = import ./modules/statix.nix { inherit adios; };
-    deadnix = import ./modules/deadnix.nix { inherit adios getExe; };
+    deadnix = import ./modules/deadnix.nix { inherit adios; };
   };
 
   options = {
@@ -40,7 +39,7 @@ in
 
     package = {
       type = types.derivation;
-      defaultFunc = options: options.pkgs.treefmt;
+      defaultFunc = { options, ... }: options.pkgs.treefmt;
     };
 
     pkgs = {
@@ -73,7 +72,7 @@ in
   };
 
   impl =
-    options:
+    { options, ... }:
     let
       inherit (options) pkgs;
       inherit (pkgs) lib;

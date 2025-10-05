@@ -5,13 +5,6 @@ Modules are contracts that are typed using the [Korora](https://github.com/adisb
 
 ## NixOS module system problems
 
-- Lack of modularity
-
-Ironically the NixOS module system isn't very modular.
-If I want to run a web service defined in NixOS, but use a database hosted elsewhere that may not be possible without forking the NixOS module.
-
-The idea is to define higher level interfaces that can be implemented by many different modules.
-
 - Lack of flexibility
 
 NixOS modules aren't reusable outside of a NixOS context.

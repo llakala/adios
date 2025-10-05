@@ -1,3 +1,0 @@
-_: {
-  name = "my-module";
-}

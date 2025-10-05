@@ -15,25 +15,27 @@ in
     let
       # Load a module definition tree.
       # This type checks modules and provides the tree API.
-      tree = adios.lib.load adios-contrib.modules.treefmt;
+      tree = adios adios-contrib.modules.treefmt;
 
-      treefmt = tree.root;
+      # Apply options to tree
+      eval = tree.eval {
+        options = {
+          "/" = {
+            inherit pkgs;
+          };
+        };
+      };
+
+      # Call treefmt contracts with applied pkgs
+      treefmt = eval.tree;
       fmts = treefmt.modules;
     in
     (treefmt {
       projectRootFile = "flake.nix";
-      inherit pkgs;
       formatters = [
-        (fmts.nixfmt {
-          package = pkgs.nixfmt-rfc-style;
-        })
-        (fmts.deadnix {
-          package = pkgs.deadnix;
-        })
-        (fmts.statix {
-          package = pkgs.statix;
-          inherit pkgs;
-        })
+        (fmts.nixfmt { })
+        (fmts.deadnix { })
+        (fmts.statix { })
       ];
     }).package;
 

@@ -4,31 +4,23 @@
 
 ### Module definition
 
-A minimal Adios module definition is a function that takes a structured argument, and retuns an attribute set with a name as a string.
-``` nix
-{{#include minimal.nix}}
-```
+Adios module definitions are plain Nix attribute sets.
 
 ### Module loading
 
 The module definition then needs to be _loaded_ by the adios loader function:
 ``` nix
-adios ({{#include minimal.nix}})
+adios {
+  name = "my-module";
+}
 ```
-
 Module loading is responsible for
-
-- Injecting top-level arguments such as:
-  - `adios` the module system
-  - `types` alias for `adios.types`
-  - `lib` nixpkgs lib
-  - `self` a reference to the loaded module
 
 - Wrapping the module definition with a type checker
 
   Module definitions are strictly typed and checked.
 
-- Wrapping callable module implementations with options type checking
+- Wrapping of module definitions `impl` function that provides type checking.
 
 ### Callable modules
 
