@@ -134,6 +134,10 @@ let
       interfaces = checkAttrsOf "${errorPrefix}: while checking 'interfaces'" types.modules.typedef (
         def.interfaces or { }
       );
+
+      inputs = checkAttrsOf "${errorPrefix}: while checking 'inputs'" types.modules.input (
+        def.inputs or { }
+      );
     }
     // (optionalAttrs (def ? name) {
       name = checkType "${errorPrefix}: while checking 'name'" types.string def.name;

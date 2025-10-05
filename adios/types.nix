@@ -1,6 +1,7 @@
 { korora }:
 
 let
+  inherit (builtins) isString;
   inherit (types)
     attrsOf
     union
@@ -58,6 +59,19 @@ let
         modules.subOptions
       ]);
 
+      input = types.option (
+        attrsOf (
+          struct "input" {
+            # Note: The lack of a type for an input means no type checking done.
+            type = optionalAttr type;
+            # TODO: Narrow permitted chars
+            path = types.typedef "pathstring" isString;
+          }
+        )
+      );
+
+      inputs = attrsOf input;
+
       lib = types.attrs;
 
       moduleDef =
@@ -68,6 +82,7 @@ let
           interfaces = optionalAttr (attrsOf type);
           impl = optionalAttr function;
           options = optionalAttr options;
+          inputs = optionalAttr inputs;
         }).override
           {
             verify =
@@ -82,6 +97,7 @@ let
         interfaces = typesT;
         inherit options;
         inherit type;
+        inherit inputs;
         __functor = optionalAttr function;
       };
     };
