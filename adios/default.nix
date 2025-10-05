@@ -15,84 +15,63 @@ let
 
   optionalAttrs = cond: attrs: if cond then attrs else { };
 
-  # Transform options into a default value attrset
-  optionsToDefaults =
-    errorPrefix: options:
+  computeOptions =
+    let
+      checkOption =
+        errorPrefix: option: value:
+        let
+          err = option.type.verify value;
+        in
+        if err != null then throw "${errorPrefix}: ${err}" else value;
+    in
+    # Options fixpoint
+    options':
+    # Error prefix string
+    errorPrefix:
+    # Defined options
+    options:
+    # Passed options
+    args:
     listToAttrs (
       concatMap (
         name:
         let
           option = options.${name};
+          errorPrefix' = "${errorPrefix}: in option '${name}'";
         in
-        if option ? default then
-          [
-            rec {
-              inherit name;
-              value =
-                if err != null then "${errorPrefix}: in option '${name}': type error ${err}" else option.default;
-              err = option.type.verify option.default;
-            }
-          ]
-        else if option ? options then
+        # Explicitly passed value
+        if args ? ${name} then
           [
             {
               inherit name;
-              value = optionsToDefaults "${errorPrefix}: in option '${name}'" option.options;
+              value = checkOption errorPrefix' option args.${name};
             }
           ]
-        else
-          [ ]
-      ) (attrNames options)
-    );
-
-  # Update default values with new ones
-  updateDefaults =
-    errorPrefix: options: old: new:
-    old
-    // mapAttrs (
-      name: value:
-      if !options ? ${name} then
-        throw "${errorPrefix}: applied option '${name}' does not exist"
-      else
-        let
-          option = options.${name};
-          err = option.type.verify value;
-        in
-        if option ? options then
-          updateDefaults "${errorPrefix}: in option ${name}" option.options (old.${name} or { }) value
-        else if err != null then
-          throw "${errorPrefix}: in option '${name}': type error ${err}"
-        else
-          value
-    ) new;
-
-  computeDefaults =
-    args': options: defaults:
-    listToAttrs (
-      concatMap (
-        name:
-        let
-          option = options.${name};
-        in
-        if option ? defaultFunc then
-          (
-            if defaults ? ${name} then
-              [ ] # Explicitly passed, no need to compute
-            else
-              [
-                {
-                  # Compute value with args fixpoint
-                  inherit name;
-                  value = option.defaultFunc args';
-                }
-              ]
-          )
+        # Default value
+        else if option ? default then
+          [
+            {
+              inherit name;
+              value = checkOption errorPrefix' option option.default;
+            }
+          ]
+        # Computed default value
+        else if option ? defaultFunc then
+          [
+            {
+              # Compute value with args fixpoint
+              inherit name;
+              value = checkOption errorPrefix' option (option.defaultFunc options');
+            }
+          ]
+        # Compute nested options
         else if option ? options then
           let
-            value = computeDefaults args' options.${name} (defaults.${name} or { });
+            value = computeOptions options' errorPrefix' options.${name} (args.${name} or { });
           in
           # Only return a value if suboptions actually returned anything
           if value != { } then [ { inherit name value; } ] else [ ]
+        # Nothing passed & no default. Leave unset.
         else
           [ ]
       ) (attrNames options)
@@ -158,18 +137,7 @@ let
         __functor =
           self: args:
           let
-            # Transform options into an attrset of default values
-            defaults =
-              updateDefaults errorPrefix self.options (optionsToDefaults errorPrefix self.options)
-                updates;
-
-            # Concat provided args with statically defined defaults
-            defaults' = updateDefaults "while calling module '${name}'" self.options defaults args;
-
-            # Compute dynamically defined defaults using defaultFunc
-            args' = updateDefaults "while calling module '${name}'" self.options defaults' (
-              computeDefaults args' self.options defaults'
-            );
+            args' = computeOptions args' errorPrefix self.options args;
           in
           def.impl args';
       });

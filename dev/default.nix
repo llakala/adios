@@ -17,6 +17,7 @@ in
     in
     (treefmt {
       projectRootFile = "flake.nix";
+      inherit pkgs;
       formatters = [
         (fmts.nixfmt {
           package = pkgs.nixfmt-rfc-style;
