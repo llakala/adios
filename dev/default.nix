@@ -12,7 +12,7 @@ in
 
   treefmt =
     let
-      inherit (adios-contrib.modules) treefmt;
+      treefmt = (adios'.adios.lib.load adios-contrib.modules.treefmt).modules;
       fmts = treefmt.modules;
     in
     (treefmt {

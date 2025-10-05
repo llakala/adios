@@ -107,10 +107,9 @@ let
   load =
     def:
     let
-      name' = def.name or "<anonymous>";
-      name = types.string.check name' name';
-
-      errorPrefix = "in module '${name}'";
+      errorPrefix =
+        if def ? name then "in module ${types.string.check def.name def.name}"
+        else "in module";
 
       # The loaded module instance
       mod = {
@@ -161,10 +160,8 @@ let
       name = "adios";
       inherit types interfaces;
 
-      lib = import ./lib.nix;
-
-      modules = {
-        nix-unit = import ./modules/nix-unit.nix;
+      lib = import ./lib.nix {
+        load' = load;
       };
     })
     // {
