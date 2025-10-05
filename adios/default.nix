@@ -139,13 +139,15 @@ let
         name = checkType "${errorPrefix}: while checking 'name'" types.string def.name;
       })
       // (optionalAttrs (def ? impl) {
+        impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
+
         # Wrap implementation with an options typechecker
         __functor =
           self: args:
           let
             args' = computeOptions args' errorPrefix self.options args;
           in
-          def.impl args';
+          self.impl args';
       });
 
     in
