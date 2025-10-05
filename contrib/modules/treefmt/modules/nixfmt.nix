@@ -1,19 +1,27 @@
-{ adios, getExe }:
+{ adios }:
 {
   name = "treefmt-nixfmt";
 
   options = {
     package = {
       type = adios.types.derivation;
-      # default = pkgs.nixfmt-rfc-style;
+      defaultFunc = { inputs, ... }: inputs."treefmt".pkgs.nixfmt;
     };
   };
 
-  impl = options: {
-    name = "nixfmt";
-    treefmt = {
-      command = getExe options.package;
-      includes = [ "*.nix" ];
+  inputs = {
+    "treefmt" = {
+      path = "..";
     };
   };
+
+  impl =
+    { options, inputs }:
+    {
+      name = "nixfmt";
+      treefmt = {
+        command = inputs.treefmt.pkgs.lib.getExe options.package;
+        includes = [ "*.nix" ];
+      };
+    };
 }
