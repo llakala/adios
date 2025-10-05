@@ -22,7 +22,7 @@ let
         let
           err = option.type.verify value;
         in
-        if err != null then throw "${errorPrefix}: ${err}" else value;
+        if err != null then (throw "${errorPrefix}: ${err}") else value;
     in
     # Options fixpoint
     options':
@@ -104,70 +104,69 @@ let
     else
       throw "${errorPrefix}: in attr: ${err}";
 
+  # Check a single type with error prefix
   checkType =
     errorPrefix: type: value:
     let
       err = type.verify value;
     in
-      if err == null then value
-      else throw "${errorPrefix}: ${err}";
+    if err == null then value else throw "${errorPrefix}: ${err}";
 
-  load =
+  # Type check a module lazily
+  loadModule =
     def:
     let
       errorPrefix =
-        if def ? name then "in module ${types.string.check def.name def.name}"
-        else "in module";
-
-      # The loaded module instance
-      mod = {
-        options = checkOptionsType "${errorPrefix} options definition" (def.options or { });
-
-        modules = mapAttrs (_: load) (def.modules or { });
-
-        lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib (def.lib or { });
-
-        types = checkAttrsOf "${errorPrefix}: while checking 'types'" types.modules.typedef (
-          def.types or { }
-        );
-
-        interfaces = checkAttrsOf "${errorPrefix}: while checking 'interfaces'" types.modules.typedef (
-          def.interfaces or { }
-        );
-      }
-      // (optionalAttrs (def ? name) {
-        name = checkType "${errorPrefix}: while checking 'name'" types.string def.name;
-      })
-      // (optionalAttrs (def ? impl) {
-        impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
-
-        # Wrap implementation with an options typechecker
-        __functor =
-          self: args:
-          let
-            args' = computeOptions args' errorPrefix self.options args;
-          in
-          self.impl args';
-      });
-
+        if def ? name then "in module ${types.string.check def.name def.name}" else "in module";
     in
-    mod;
+    # The loaded module instance
+    {
+      options = checkOptionsType "${errorPrefix} options definition" (def.options or { });
+
+      modules = mapAttrs (_: loadModule) (def.modules or { });
+
+      lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib (def.lib or { });
+
+      types = checkAttrsOf "${errorPrefix}: while checking 'types'" types.modules.typedef (
+        def.types or { }
+      );
+
+      interfaces = checkAttrsOf "${errorPrefix}: while checking 'interfaces'" types.modules.typedef (
+        def.interfaces or { }
+      );
+    }
+    // (optionalAttrs (def ? name) {
+      name = checkType "${errorPrefix}: while checking 'name'" types.string def.name;
+    })
+    // (optionalAttrs (def ? impl) {
+      impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
+
+      # Wrap implementation with an options typechecker
+      __functor =
+        self: args:
+        let
+          args' = computeOptions args' errorPrefix self.options args;
+        in
+        self.impl args';
+    });
 
   interfaces = import ./interfaces.nix { inherit types; };
 
   adios =
-    (load {
+    (loadModule {
       name = "adios";
       inherit types interfaces;
 
-      lib = import ./lib.nix {
-        load' = load;
+      lib = {
+        load = root: {
+          root = loadModule root;
+        };
       };
     })
     // {
       # Overwrite default functor with one that _does not_ do type checking.
       # `load` does it's own type checking.
-      __functor = _: load;
+      __functor = _: loadModule;
     };
 
 in
