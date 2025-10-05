@@ -90,10 +90,6 @@ let
         inherit type;
         __functor = function;
       };
-
-      moduleInstance = struct "moduleInstance" {
-        name = optionalAttr string;
-      };
     };
   };
 
