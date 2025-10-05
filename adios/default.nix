@@ -104,9 +104,8 @@ let
     else
       throw "${errorPrefix}: in attr: ${err}";
 
-  # Apply one or more defaults to module.
-  apply =
-    def: updates:
+  load =
+    def:
     let
       name' = def.name or "<anonymous>";
       name = types.string.check name' name';
@@ -116,8 +115,6 @@ let
       # The loaded module instance
       mod = {
         options = checkOptionsType "${errorPrefix} options definition" (def.options or { });
-
-        apply = updates': apply def (updates // updates');
 
         modules = mapAttrs (_: load) (def.modules or { });
 
@@ -157,14 +154,14 @@ let
     in
     mod;
 
-  load = moduleDef: apply moduleDef { };
-
   interfaces = import ./interfaces.nix { inherit types; };
 
   adios =
     (load {
       name = "adios";
       inherit types interfaces;
+
+      lib = import ./lib.nix;
 
       modules = {
         nix-unit = import ./modules/nix-unit.nix;
