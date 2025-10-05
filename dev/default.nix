@@ -7,12 +7,17 @@
 
 let
   inherit (pkgs) callPackage;
+  inherit (adios') adios;
 in
 {
 
   treefmt =
     let
-      treefmt = (adios'.adios.lib.load adios-contrib.modules.treefmt).modules;
+      # Load a module definition tree.
+      # This type checks modules and provides the tree API.
+      tree = adios.lib.load adios-contrib.modules.treefmt;
+
+      treefmt = tree.root;
       fmts = treefmt.modules;
     in
     (treefmt {
