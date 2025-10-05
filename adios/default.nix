@@ -141,8 +141,6 @@ let
 
       # The loaded module instance
       mod = {
-        inherit name;
-
         options = options';
 
         apply = updates': apply def (updates // updates');
@@ -157,6 +155,9 @@ let
           def.interfaces or { }
         );
       }
+      // (optionalAttrs (def ? name) {
+        inherit (def) name;
+      })
       // (optionalAttrs (def ? impl) {
         # Wrap implementation with an options typechecker
         __functor =

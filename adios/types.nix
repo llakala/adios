@@ -70,22 +70,17 @@ let
           {
             verify =
               self:
-              (
-                if self ? type && self ? options then
-                  "'type' is mutually exclusive with 'options'"
-                else
-                  null
-              );
+              (if self ? type && self ? options then "'type' is mutually exclusive with 'options'" else null);
           };
 
       module = struct "module" {
-        name = string;
+        name = optionalAttr string;
         modules = attrsOf module;
         types = typesT;
         interfaces = typesT;
         inherit options;
         inherit type;
-        __functor = function;
+        __functor = optionalAttr function;
       };
     };
   };
