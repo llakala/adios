@@ -8,16 +8,17 @@
         "repo": "korora"
       },
       "branch": "master",
-      "revision": "f7d8f17c4f20b69bc77189d4202c59c680400623",
-      "url": "https://github.com/adisbladis/korora/archive/f7d8f17c4f20b69bc77189d4202c59c680400623.tar.gz",
-      "hash": "15im7sm7z36n128g38fz3dcy26qml7vzj986x0nfpzwgyd7499pb"
+      "submodules": false,
+      "revision": "5178e3b11ad6d7cc1682d3af60e97008185449b9",
+      "url": "https://github.com/adisbladis/korora/archive/5178e3b11ad6d7cc1682d3af60e97008185449b9.tar.gz",
+      "hash": "12slgkahrk5zrzmww6l8kzwk1fn51vaidsahqhmgcpvckx26q91k"
     },
     "nixpkgs": {
       "type": "Channel",
       "name": "nixpkgs-unstable",
-      "url": "https://releases.nixos.org/nixpkgs/nixpkgs-25.11pre840248.a683adc19ff5/nixexprs.tar.xz",
-      "hash": "1f6k2wkx4hl1shbn46kb9gbc08xw2xh48777c6dwnwf6gnyiwmp5"
+      "url": "https://releases.nixos.org/nixpkgs/nixpkgs-25.11pre871088.0d4f673a88f8/nixexprs.tar.xz",
+      "hash": "1mipz3df0s9b1nmjqa5fnfcdh34sj8ib12imasp4909azwzwfl9c"
     }
   },
-  "version": 3
+  "version": 5
 }
