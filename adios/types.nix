@@ -58,6 +58,8 @@ let
         modules.subOptions
       ]);
 
+      lib = types.attrs;
+
       moduleDef =
         (struct "moduleDef" {
           name = optionalAttr string;

@@ -121,6 +121,18 @@ let
 
         modules = mapAttrs (_: load) (def.modules or { });
 
+        lib =
+          if def ? lib then
+            (
+              let
+                type = types.modules.lib;
+                err = type.verify def.lib;
+              in
+              if err != null then (throw "${errorPrefix}: while checking 'lib': ${err}") else def.lib
+            )
+          else
+            { };
+
         types = checkAttrsOf "${errorPrefix}: while checking 'types'" types.modules.typedef (
           def.types or { }
         );
