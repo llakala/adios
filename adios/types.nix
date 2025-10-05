@@ -73,8 +73,6 @@ let
               (
                 if self ? type && self ? options then
                   "'type' is mutually exclusive with 'options'"
-                else if self ? options && !(self ? impl) then
-                  "has 'options' but no 'impl' provided"
                 else
                   null
               );

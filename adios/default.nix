@@ -91,7 +91,7 @@ let
           let
             value = computeDefaults args' options.${name} (defaults.${name} or { });
           in
-          # Only return an updated value if suboptions were actually computed anything
+          # Only return a value if suboptions actually returned anything
           if value != { } then [ { inherit name value; } ] else [ ]
         else
           [ ]
