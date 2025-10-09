@@ -145,10 +145,6 @@ let
         def.types or { }
       );
 
-      interfaces = checkAttrsOf "${errorPrefix}: while checking 'interfaces'" types.modules.typedef (
-        def.interfaces or { }
-      );
-
       inputs = checkAttrsOf "${errorPrefix}: while checking 'inputs'" types.modules.input (
         def.inputs or { }
       );
@@ -171,8 +167,6 @@ let
         in
         self.impl args';
     });
-
-  interfaces = import ./interfaces.nix { inherit types; };
 
   # Merge lhs & rhs recursing into suboptions
   mergeOptionsUnchecked =
@@ -465,7 +459,7 @@ let
   adios =
     (loadModule {
       name = "adios";
-      inherit types interfaces;
+      inherit types;
     })
     // {
       # Overwrite default functor with one that _does not_ do type checking.
