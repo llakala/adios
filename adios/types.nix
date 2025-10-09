@@ -79,7 +79,6 @@ let
           name = optionalAttr string;
           modules = optionalAttr (attrsOf module);
           types = optionalAttr typesT;
-          interfaces = optionalAttr (attrsOf type);
           impl = optionalAttr function;
           options = optionalAttr options;
           inputs = optionalAttr inputs;
@@ -94,7 +93,6 @@ let
         name = optionalAttr string;
         modules = attrsOf module;
         types = typesT;
-        interfaces = typesT;
         inherit options;
         inherit type;
         inherit inputs;
