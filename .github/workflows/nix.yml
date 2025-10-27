@@ -12,12 +12,21 @@ permissions:
   id-token: write
 
 jobs:
+  nix-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: cachix/install-nix-action@v30
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - uses: actions/checkout@v4.2.2
+      - name: Run build
+        run: nix-shell --run true
+
   build-pages:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     needs:
-      - nix-unit
-      - checks
+      - nix-shell
     steps:
       - uses: cachix/install-nix-action@v30
         with:
