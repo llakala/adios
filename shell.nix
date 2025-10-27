@@ -4,14 +4,42 @@
 }:
 
 let
-  dev = import ./dev { inherit __sources pkgs; };
+  inherit (import ./.) adios adios-contrib;
+
+  treefmt =
+    let
+      # Load a module definition tree.
+      # This type checks modules and provides the tree API.
+      tree = adios adios-contrib.modules.treefmt;
+
+      # Apply options to tree
+      eval = tree.eval {
+        options = {
+          "/" = {
+            inherit pkgs;
+          };
+        };
+      };
+
+      # Call treefmt contracts with applied pkgs
+      treefmt = eval.tree;
+      fmts = treefmt.modules;
+    in
+    (treefmt {
+      projectRootFile = "flake.nix";
+      formatters = [
+        (fmts.nixfmt { })
+        (fmts.deadnix { })
+        (fmts.statix { })
+      ];
+    }).package;
 
 in
 pkgs.mkShell {
   packages = [
     pkgs.npins
     pkgs.nix-unit
-    dev.treefmt
+    treefmt
     pkgs.mdbook
   ];
 }

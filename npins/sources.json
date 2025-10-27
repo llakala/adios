@@ -1,23 +1,10 @@
 {
   "pins": {
-    "korora": {
-      "type": "Git",
-      "repository": {
-        "type": "GitHub",
-        "owner": "adisbladis",
-        "repo": "korora"
-      },
-      "branch": "master",
-      "submodules": false,
-      "revision": "5178e3b11ad6d7cc1682d3af60e97008185449b9",
-      "url": "https://github.com/adisbladis/korora/archive/5178e3b11ad6d7cc1682d3af60e97008185449b9.tar.gz",
-      "hash": "12slgkahrk5zrzmww6l8kzwk1fn51vaidsahqhmgcpvckx26q91k"
-    },
     "nixpkgs": {
       "type": "Channel",
       "name": "nixpkgs-unstable",
-      "url": "https://releases.nixos.org/nixpkgs/nixpkgs-25.11pre871088.0d4f673a88f8/nixexprs.tar.xz",
-      "hash": "1mipz3df0s9b1nmjqa5fnfcdh34sj8ib12imasp4909azwzwfl9c"
+      "url": "https://releases.nixos.org/nixpkgs/nixpkgs-25.11pre883899.02f2cb8e0feb/nixexprs.tar.xz",
+      "hash": "0k4n6f873a4ls1mff6wck6z31kglgg8irwc5s3xsprrwbxdv7p58"
     }
   },
   "version": 5

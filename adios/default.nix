@@ -1,9 +1,7 @@
-{
-  korora,
-}:
-
 let
-  types = import ./types.nix { inherit korora; };
+  types = import ./types.nix {
+    korora = import ../types/types.nix;
+  };
 
   inherit (builtins)
     attrNames
