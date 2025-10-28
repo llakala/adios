@@ -208,7 +208,16 @@ let
       in
       # Assert that module input begins with a /
       assert head tokens == "";
-      foldl' (acc: tok: acc.modules.${tok}) module (tail tokens);
+      foldl' (
+        acc: tok:
+        if !acc.modules ? ${tok} then
+          throw ''
+            Module path `${tok}` wasn't a child module of `${acc.name}`.
+            Valid children of `${acc.name}`: [${concatStringsSep ", " (builtins.attrNames acc.modules)}]
+          ''
+        else
+          acc.modules.${tok}
+      ) module (tail tokens);
 
   # Resolve required module dependencies for defined config options
   resolveTree =
