@@ -10,7 +10,7 @@ let
     let
       # Load a module definition tree.
       # This type checks modules and provides the tree API.
-      tree = adios adios-contrib.modules.treefmt;
+      tree = adios adios-contrib;
 
       # Apply options to tree
       eval = tree.eval {
@@ -22,7 +22,7 @@ let
       };
 
       # Call treefmt contracts with applied pkgs
-      treefmt = eval.tree;
+      treefmt = eval.tree.modules.treefmt;
       fmts = treefmt.modules;
     in
     (treefmt {

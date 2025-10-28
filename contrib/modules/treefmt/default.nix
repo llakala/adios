@@ -13,6 +13,12 @@ in
     deadnix = import ./modules/deadnix.nix { inherit adios; };
   };
 
+  inputs = {
+    "root" = {
+      path = "..";
+    };
+  };
+
   options = {
     formatters = {
       type = types.listOf (
@@ -44,6 +50,7 @@ in
 
     pkgs = {
       type = types.attrs;
+      defaultFunc = { inputs, ... }: inputs.root.pkgs;
     };
 
     excludes = {
