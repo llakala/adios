@@ -9,7 +9,10 @@ let
     mapAttrs
     concatMap
     isAttrs
+    length
     genericClosure
+    genList
+    elemAt
     filter
     isString
     split
@@ -192,9 +195,23 @@ let
   # Split string by separator
   splitString = sep: s: filter isString (split sep s);
 
+  removeTail = list: genList (elemAt list) (length list - 1);
+
   # Return absolute module path relative to pwd
   absModulePath =
-    pwd: path: toString (if substring 0 1 path == "/" then /. + path else /. + pwd + "/${path}");
+    pwd: path:
+    let
+      tokens = splitString "/" pwd;
+    in
+    if substring 0 1 path == "/" then
+      path
+    else if substring 0 2 path == ".." then
+      if length tokens == 2 then "/" else concatStringsSep "/" (removeTail tokens)
+    else
+      throw ''
+        Module path `${path}` in module directory `${pwd}` didn't start with a valid prefix. Paths
+        should be prefixed with `..` or `/`.
+      '';
 
   # Get a module by it's / delimited path
   getModule =
