@@ -220,7 +220,7 @@ let
         if !module.modules ? ${tok} then
           throw ''
             Module path `${tok}` wasn't a child module of `${module.name or anonymousModuleName}`.
-            Valid children of `${module.name}`: [${concatStringsSep ", " (builtins.attrNames module.modules)}]
+            Valid children of `${module.name}`: [${concatStringsSep ", " (attrNames module.modules)}]
           ''
         else
           module.modules.${tok}
@@ -389,7 +389,7 @@ let
               else
                 throw ''
                   Module overriding caused re-resolving, which is disabled.
-                  Differing modules: ${builtins.concatStringsSep " " newModuleNames}
+                  Differing modules: ${concatStringsSep " " newModuleNames}
                 ''
             )
           else
