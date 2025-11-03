@@ -1,9 +1,7 @@
 { adios }:
 let
   inherit (adios) types;
-
 in
-
 {
   name = "treefmt";
 
@@ -14,8 +12,8 @@ in
   };
 
   inputs = {
-    "root" = {
-      path = "..";
+    "nixpkgs" = {
+      path = "/nixpkgs";
     };
   };
 
@@ -45,12 +43,7 @@ in
 
     package = {
       type = types.derivation;
-      defaultFunc = { options }: options.pkgs.treefmt;
-    };
-
-    pkgs = {
-      type = types.attrs;
-      defaultFunc = { inputs }: inputs.root.pkgs;
+      defaultFunc = { inputs }: inputs."nixpkgs".pkgs.treefmt;
     };
 
     excludes = {
@@ -79,9 +72,9 @@ in
   };
 
   impl =
-    { options, ... }:
+    { options, inputs, ... }:
     let
-      inherit (options) pkgs;
+      inherit (inputs."nixpkgs") pkgs;
       inherit (pkgs) lib;
       inherit (lib)
         groupBy

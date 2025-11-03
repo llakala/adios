@@ -8,7 +8,7 @@ in
   options = {
     package = {
       type = types.derivation;
-      defaultFunc = { inputs }: inputs."treefmt".pkgs.statix;
+      defaultFunc = { inputs }: inputs."nixpkgs".pkgs.statix;
     };
 
     disabled-lints = {
@@ -18,8 +18,8 @@ in
   };
 
   inputs = {
-    "treefmt" = {
-      path = "..";
+    "nixpkgs" = {
+      path = "/nixpkgs";
     };
   };
 
@@ -30,8 +30,9 @@ in
       treefmt = {
         command =
           let
-            inherit (inputs."treefmt") pkgs;
-            cmd = pkgs.lib.getExe options.package;
+            inherit (inputs."nixpkgs") pkgs;
+            inherit (pkgs) lib;
+            cmd = lib.getExe options.package;
 
             # statix requires its configuration file to be named statix.toml exactly
             # See: https://github.com/nerdypepper/statix/pull/54
