@@ -137,8 +137,6 @@ let
 
       modules = mapAttrs (_: loadModule) (def.modules or { });
 
-      lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib (def.lib or { });
-
       types = checkAttrsOf "${errorPrefix}: while checking 'types'" types.modules.typedef (
         def.types or { }
       );
