@@ -72,8 +72,6 @@ let
 
       inputs = attrsOf input;
 
-      lib = types.attrs;
-
       moduleDef =
         (struct "moduleDef" {
           name = optionalAttr string;
