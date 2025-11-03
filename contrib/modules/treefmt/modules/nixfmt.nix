@@ -5,22 +5,26 @@
   options = {
     package = {
       type = adios.types.derivation;
-      defaultFunc = { inputs }: inputs."treefmt".pkgs.nixfmt;
+      defaultFunc = { inputs }: inputs."nixpkgs".pkgs.nixfmt;
     };
   };
 
   inputs = {
-    "treefmt" = {
-      path = "..";
+    "nixpkgs" = {
+      path = "/nixpkgs";
     };
   };
 
   impl =
     { options, inputs }:
+    let
+      inherit (inputs."nixpkgs") pkgs;
+      inherit (pkgs) lib;
+    in
     {
       name = "nixfmt";
       treefmt = {
-        command = inputs.treefmt.pkgs.lib.getExe options.package;
+        command = lib.getExe options.package;
         includes = [ "*.nix" ];
       };
     };

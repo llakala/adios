@@ -21,7 +21,7 @@ let
     };
 
     inputs = {
-      "root" = {
+      "nixpkgs" = {
         path = "..";
       };
     };
@@ -103,7 +103,7 @@ let
     impl =
       { options, inputs }:
       let
-        inherit (inputs.root) pkgs;
+        inherit (inputs.nixpkgs) pkgs;
         inherit (pkgs) lib;
 
         package = pkgs.stdenv.mkDerivation {
