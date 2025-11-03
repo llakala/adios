@@ -33,7 +33,7 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
       - uses: actions/checkout@v4.2.2
       - name: Run build
-        run: nix-build ./dev -A doc
+        run: nix-build ./doc -A doc
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
