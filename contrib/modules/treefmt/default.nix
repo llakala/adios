@@ -72,7 +72,7 @@ in
   };
 
   impl =
-    { options, inputs, ... }:
+    { options, inputs }:
     let
       inherit (inputs."nixpkgs") pkgs;
       inherit (pkgs) lib;
