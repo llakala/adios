@@ -28,6 +28,9 @@ let
   # A coarse grained options type for input validation
   optionsType = types.attrsOf types.attrs;
 
+  # Default in error messages when no name is provided
+  anonymousModuleName = "<anonymous>";
+
   # Compute options from defaults & provided args
   computeOptions =
     let
@@ -213,14 +216,14 @@ let
       # Assert that module input begins with a /
       assert head tokens == "";
       foldl' (
-        acc: tok:
-        if !acc.modules ? ${tok} then
+        module: tok:
+        if !module.modules ? ${tok} then
           throw ''
-            Module path `${tok}` wasn't a child module of `${acc.name}`.
-            Valid children of `${acc.name}`: [${concatStringsSep ", " (builtins.attrNames acc.modules)}]
+            Module path `${tok}` wasn't a child module of `${module.name or anonymousModuleName}`.
+            Valid children of `${module.name}`: [${concatStringsSep ", " (builtins.attrNames module.modules)}]
           ''
         else
-          acc.modules.${tok}
+          module.modules.${tok}
       ) module (tail tokens);
 
   # Resolve required module dependencies for defined config options
