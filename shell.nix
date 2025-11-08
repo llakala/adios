@@ -41,5 +41,6 @@ pkgs.mkShell {
     pkgs.nix-unit
     treefmt
     pkgs.mdbook
+    pkgs.mdbook-cmdrun
   ];
 }
