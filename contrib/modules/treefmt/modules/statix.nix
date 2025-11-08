@@ -8,7 +8,7 @@ in
   options = {
     package = {
       type = types.derivation;
-      defaultFunc = { inputs, ... }: inputs."treefmt".pkgs.statix;
+      defaultFunc = { inputs }: inputs."treefmt".pkgs.statix;
     };
 
     disabled-lints = {

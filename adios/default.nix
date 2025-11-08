@@ -19,6 +19,8 @@ let
     attrValues
     substring
     concatStringsSep
+    intersectAttrs
+    functionArgs
     ;
 
   optionalAttrs = cond: attrs: if cond then attrs else { };
@@ -73,7 +75,9 @@ let
             {
               # Compute value with args fixpoint
               inherit name;
-              value = checkOption errorPrefix' option (option.defaultFunc self);
+              value = checkOption errorPrefix' option (
+                option.defaultFunc (intersectAttrs (functionArgs option.defaultFunc) self)
+              );
             }
           ]
         # Compute nested options

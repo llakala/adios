@@ -45,12 +45,12 @@ in
 
     package = {
       type = types.derivation;
-      defaultFunc = { options, ... }: options.pkgs.treefmt;
+      defaultFunc = { options }: options.pkgs.treefmt;
     };
 
     pkgs = {
       type = types.attrs;
-      defaultFunc = { inputs, ... }: inputs.root.pkgs;
+      defaultFunc = { inputs }: inputs.root.pkgs;
     };
 
     excludes = {

@@ -5,7 +5,7 @@
   options = {
     package = {
       type = adios.types.derivation;
-      defaultFunc = { inputs, ... }: inputs."treefmt".pkgs.deadnix;
+      defaultFunc = { inputs }: inputs."treefmt".pkgs.deadnix;
     };
   };
 

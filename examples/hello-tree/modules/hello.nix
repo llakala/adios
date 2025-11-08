@@ -11,7 +11,7 @@ in
 
     package = {
       type = types.derivation;
-      defaultFunc = { inputs, ... }: inputs."nixpkgs".pkgs.hello;
+      defaultFunc = { inputs }: inputs."nixpkgs".pkgs.hello;
     };
   };
 
