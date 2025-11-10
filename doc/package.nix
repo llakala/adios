@@ -2,6 +2,7 @@
   stdenvNoCC,
   __src ? ../.,
   mdbook,
+  mdbook-cmdrun,
 }:
 
 stdenvNoCC.mkDerivation {
@@ -10,6 +11,7 @@ stdenvNoCC.mkDerivation {
   src = __src;
   nativeBuildInputs = [
     mdbook
+    mdbook-cmdrun
   ];
 
   dontConfigure = true;
