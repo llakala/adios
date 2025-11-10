@@ -31,6 +31,9 @@ let
   # Default in error messages when no name is provided
   anonymousModuleName = "<anonymous>";
 
+  # Call a function with only it's supported attributes.
+  callFunction = fn: attrs: fn (intersectAttrs (functionArgs fn) attrs);
+
   # Compute options from defaults & provided args
   computeOptions =
     let
@@ -78,9 +81,7 @@ let
             {
               # Compute value with args fixpoint
               inherit name;
-              value = checkOption errorPrefix' option (
-                option.defaultFunc (intersectAttrs (functionArgs option.defaultFunc) self)
-              );
+              value = checkOption errorPrefix' option (callFunction option.defaultFunc self);
             }
           ]
         # Compute nested options
@@ -170,7 +171,7 @@ let
         let
           args' = computeOptions args' errorPrefix self.options { inherit options inputs; };
         in
-        self.impl args';
+        callFunction self.impl args';
     });
 
   # Merge lhs & rhs recursing into suboptions
@@ -284,7 +285,7 @@ let
               [
                 {
                   name = modulePath;
-                  value = module.impl args.${modulePath};
+                  value = callFunction module.impl args.${modulePath};
                 }
               ]
             else
