@@ -22,7 +22,7 @@ let
 
     inputs = {
       "nixpkgs" = {
-        path = "..";
+        path = "/nixpkgs";
       };
     };
 
