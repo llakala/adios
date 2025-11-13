@@ -371,7 +371,7 @@ let
     root: prevEval:
     {
       # Updated options
-      options,
+      options ? { },
       # Whether to allow re-resolving
       resolve ? true,
     }:
@@ -451,7 +451,7 @@ let
 
       eval =
         {
-          options,
+          options ? { },
         }:
         optionsType.check options (
           let
