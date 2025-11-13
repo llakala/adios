@@ -22,7 +22,7 @@ let
       };
 
       # Call treefmt contracts with applied pkgs
-      treefmt = eval.tree.modules.treefmt;
+      treefmt = eval.root.modules.treefmt;
       fmts = treefmt.modules;
     in
     (treefmt {
