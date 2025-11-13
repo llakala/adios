@@ -427,7 +427,7 @@ let
           };
 
           # Tree context
-          tree = applyTreeOptions {
+          root = applyTreeOptions {
             inherit root;
             options = options';
             inherit (result.eval) args;
@@ -464,7 +464,7 @@ let
                 evalModuleTree { inherit resolution options; };
 
               # Tree context
-              tree = applyTreeOptions {
+              root = applyTreeOptions {
                 root = root';
                 inherit options;
                 inherit (result.eval) args;
