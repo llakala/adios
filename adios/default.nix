@@ -419,7 +419,7 @@ let
 
         result = {
           # Overriden eval context
-          eval = evalModuleTree {
+          evalParams = evalModuleTree {
             inherit resolution;
             options = options';
             memoArgs = removeAttrs prevEval.args diff;
@@ -430,11 +430,11 @@ let
           root = applyTreeOptions {
             inherit root;
             options = options';
-            inherit (result.eval) args;
+            inherit (result.evalParams) args;
           };
 
           # Chained override function
-          override = mkOverride root result.eval;
+          override = mkOverride root result.evalParams;
         };
       in
       result
@@ -457,7 +457,7 @@ let
           let
             result = {
               # Eval context
-              eval =
+              evalParams =
                 let
                   resolution = resolveTree root' (attrNames options);
                 in
@@ -467,11 +467,11 @@ let
               root = applyTreeOptions {
                 root = root';
                 inherit options;
-                inherit (result.eval) args;
+                inherit (result.evalParams) args;
               };
 
               # Chained override function
-              override = mkOverride root' result.eval;
+              override = mkOverride root' result.evalParams;
             };
           in
           result
