@@ -218,7 +218,7 @@ let
       if head tokens != "" then
         throw ''
           Module path `${name}` didn't start with a slash, when it was expected to.
-          This likely means you used the incorrect name during the eval stage.
+          This likely means you used the incorrect name during the initialization stage.
           A module path should look something like "/nixpkgs", which refers to `root.modules.nixpkgs`,
           and lets us set the options for that module.
         ''
@@ -449,7 +449,7 @@ let
     {
       root = root';
 
-      eval =
+      init =
         {
           options ? { },
         }:
