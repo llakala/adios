@@ -334,12 +334,12 @@ let
           in
           inspectImpl inputModule inputModule.args.options
         ) module.inputs;
-        options = computeOptions {
+        options = inspectImpl module (computeOptions {
           inherit args;
           errorPrefix = "while computing ${modulePath} args";
           inherit (module) options;
           passedArgs = passedArgs.${modulePath} or { };
-        };
+        });
       };
     in
     args;
@@ -385,23 +385,25 @@ let
                 let
                   passedOptions = options.${modulePath} or { };
                 in
-                self: options:
+                _: options:
                 let
                   # Concat passed options with options passed to tree eval
                   options' = mergeOptionsUnchecked self.options passedOptions options;
                   # Re-compute args fixpoint with passed args
                   args = {
                     inherit (self.args) inputs;
-                    options = computeOptions {
+                    options = inspectImpl self (
+                      computeOptions {
                       inherit args;
                       errorPrefix = "while calling ${modulePath}";
                       inherit (module) options;
                       passedArgs = options';
-                    };
+                    }
+                    );
                   };
                 in
                 # Call implementation
-                self.impl args;
+                callFunction self.impl args;
             };
         in
         self;
