@@ -353,36 +353,43 @@ let
                 in
                 inspectImpl inputModule inputModule.args.options
               ) module.inputs;
-              options = computeOptions args' "while computing ${modulePath} args" module.options (
-                options.${modulePath} or { }
+              options = inspectImpl self (
+                computeOptions args' "while computing ${modulePath} args" module.options (
+                  options.${modulePath} or { }
+                )
               );
             };
+
+          self =
+            module
+            // {
+              args = args';
+              # Recurse into child modules
+              modules = mapAttrs (moduleName: recurse (modulePath' ++ [ moduleName ])) module.modules;
+            }
+            // optionalAttrs (module ? impl) {
+              # Wrap module call with computed args
+              __functor =
+                let
+                  passedOptions = options.${modulePath} or { };
+                in
+                _: options:
+                let
+                  # Concat passed options with options passed to tree eval
+                  options' = mergeOptionsUnchecked self.options passedOptions options;
+                  # Re-compute args fixpoint with passed args
+                  args = {
+                    inherit (self.args) inputs;
+                    options = inspectImpl self (
+                      computeOptions args "while calling ${modulePath}" module.options options'
+                    );
+                  };
+                in
+                # Call implementation
+                callFunction self.impl args;
+            };
         in
-        module
-        // {
-          args = args';
-          # Recurse into child modules
-          modules = mapAttrs (moduleName: recurse (modulePath' ++ [ moduleName ])) module.modules;
-        }
-        // optionalAttrs (module ? impl) {
-          # Wrap module call with computed args
-          __functor =
-            let
-              passedOptions = options.${modulePath} or { };
-            in
-            self: options:
-            let
-              # Concat passed options with options passed to tree eval
-              options' = mergeOptionsUnchecked self.options passedOptions options;
-              # Re-compute args fixpoint with passed args
-              args = {
-                inherit (self.args) inputs;
-                options = computeOptions args "while calling ${modulePath}" module.options options';
-              };
-            in
-            # Call implementation
-            callFunction self.impl args;
-        };
+        self;
 
       tree' = recurse [ ] root;
     in
