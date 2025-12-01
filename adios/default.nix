@@ -257,6 +257,18 @@ let
         })
     );
 
+  # When inspecting the args passed to a module within an `impl` or
+  # `defaultFunc`, include the functor to call the module's impl directly.
+  inspectImpl =
+    module: oldArgs:
+    if module ? impl then
+      oldArgs
+      // {
+        __functor = _: newArgs: module newArgs;
+      }
+    else
+      oldArgs;
+
   evalModuleTree =
     {
       # Passed options
@@ -316,7 +328,11 @@ let
     let
       args = {
         inputs = mapAttrs (
-          _: input: (getModule root (absModulePath modulePath input.path)).args.options
+          _: input:
+          let
+            inputModule = getModule root (absModulePath modulePath input.path);
+          in
+          inspectImpl inputModule inputModule.args.options
         ) module.inputs;
         options = computeOptions {
           inherit args;
