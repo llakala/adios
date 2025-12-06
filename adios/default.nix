@@ -349,9 +349,25 @@ let
               inputs = mapAttrs (
                 _: input:
                 let
+                  inputModulePath = absModulePath modulePath input.path;
                   inputModule = getModule tree' (absModulePath modulePath input.path);
                 in
-                inspectImpl inputModule inputModule.args.options
+                inputModule.args.options
+                // optionalAttrs (inputModule ? impl) {
+                  # Make sure that when the functor is called, we recompute the options, so any
+                  # defaultFuncs are updated to use the "new" args passed via impl
+                  __functor =
+                    _: implArgs:
+                    let
+                      inputModuleArgs = {
+                        inherit (inputModule.args) inputs;
+                        options =
+                          computeOptions inputModuleArgs "while calling ${inputModulePath}" inputModule.options
+                            implArgs;
+                      };
+                    in
+                    inputModule inputModuleArgs.options;
+                }
               ) module.inputs;
               options = inspectImpl self (
                 computeOptions args' "while computing ${modulePath} args" module.options (
