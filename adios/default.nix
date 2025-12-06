@@ -330,9 +330,28 @@ let
         inputs = mapAttrs (
           _: input:
           let
-            inputModule = getModule root (absModulePath modulePath input.path);
+            inputPath = absModulePath modulePath input.path;
+            inputModule = getModule root inputPath;
           in
-          inspectImpl inputModule inputModule.args.options
+          inputModule.args.options
+          // optionalAttrs (inputModule ? impl) {
+            # Make sure that when the functor is called, we recompute the options, so any
+            # defaultFuncs are updated to use the "new" args passed via impl
+            __functor =
+              _: implArgs:
+              let
+                inputModuleArgs = {
+                  inherit (inputModule.args) inputs;
+                  options = computeOptions {
+                    args = inputModuleArgs;
+                    errorPrefix = "while calling ${inputPath}";
+                    inherit (inputModule) options;
+                    passedArgs = implArgs;
+                  };
+                };
+              in
+              inputModule inputModuleArgs.options;
+          }
         ) module.inputs;
         options = inspectImpl module (computeOptions {
           inherit args;
@@ -392,14 +411,12 @@ let
                   # Re-compute args fixpoint with passed args
                   args = {
                     inherit (self.args) inputs;
-                    options = inspectImpl self (
-                      computeOptions {
+                    options = inspectImpl self (computeOptions {
                       inherit args;
                       errorPrefix = "while calling ${modulePath}";
                       inherit (module) options;
                       passedArgs = options';
-                    }
-                    );
+                    });
                   };
                 in
                 # Call implementation
