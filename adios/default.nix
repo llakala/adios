@@ -330,9 +330,33 @@ let
         inputs = mapAttrs (
           _: input:
           let
-            inputModule = getModule root (absModulePath modulePath input.path);
+            inputPath = absModulePath modulePath input.path;
+            inputModule = getModule root inputPath;
           in
-          inspectImpl inputModule inputModule.args.options
+          inputModule.args.options
+          // optionalAttrs (inputModule ? impl) {
+            __functor =
+              _: implOptions:
+              let
+                args =
+                  # Reuse existing args if impl isn't being passed anything new
+                  if implOptions == { } then
+                    inputModule.args.options
+                  else
+                    # If any new args are passed, recompute the options, so any
+                    # defaultFuncs are updated
+                    {
+                      inherit (inputModule.args) inputs;
+                      options = computeOptions {
+                        inherit args;
+                        inherit (inputModule) options;
+                        errorPrefix = "while calling ${inputPath}";
+                        passedArgs = implOptions;
+                      };
+                    };
+              in
+              callFunction inputModule.impl args;
+          }
         ) module.inputs;
         options = inspectImpl module (computeOptions {
           inherit args;
