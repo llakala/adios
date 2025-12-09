@@ -49,14 +49,16 @@ let
         in
         if err != null then (throw "${errorPrefix}: ${err}") else value;
     in
-    # Computed args fixpoint
-    self:
-    # Error prefix string
-    errorPrefix:
-    # Defined options
-    options:
-    # Passed options
-    args:
+    {
+      # Computed args fixpoint
+      self,
+      # Error prefix string
+      errorPrefix,
+      # Defined options
+      options,
+      # Passed options
+      args,
+    }:
     listToAttrs (
       concatMap (
         name:
@@ -92,7 +94,12 @@ let
         # Compute nested options
         else if option ? options then
           let
-            value = computeOptions self errorPrefix' options.${name} (args.${name} or { });
+            value = computeOptions {
+              inherit self;
+              errorPrefix = errorPrefix';
+              options = options.${name};
+              args = args.${name} or { };
+            };
           in
           # Only return a value if suboptions actually returned anything
           if value != { } then [ { inherit name value; } ] else [ ]
@@ -277,9 +284,12 @@ let
       args =
         mapAttrs (modulePath: module: {
           inputs = mapAttrs (_: input: args.${input.path}.options) module.inputs;
-          options = computeOptions args.${modulePath} "while computing ${modulePath} args" module.options (
-            options.${modulePath} or { }
-          );
+          options = computeOptions {
+            self = args.${modulePath};
+            errorPrefix = "while computing ${modulePath} args";
+            inherit (module) options;
+            args = options.${modulePath} or { };
+          };
         }) resolution
         // memoArgs;
 
@@ -382,9 +392,12 @@ let
                   # Re-compute args fixpoint with passed args
                   args = {
                     inherit (self.args) inputs;
-                    options = inspectImpl self (
-                      computeOptions args "while calling ${modulePath}" module.options options'
-                    );
+                    options = inspectImpl self (computeOptions {
+                      self = args;
+                      errorPrefix = "while calling ${modulePath}";
+                      inherit (module) options;
+                      args = options';
+                    });
                   };
                 in
                 # Call implementation
