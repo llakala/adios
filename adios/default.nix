@@ -317,6 +317,53 @@ let
         // memoResults;
     };
 
+  computeArgs =
+    {
+      root,
+      module,
+      modulePath,
+      # Options to be injected
+      options,
+    }:
+    let
+      final = {
+        inputs = mapAttrs (
+          _: input:
+          let
+            # TODO: should modulePath be used here instead of root?
+            modulePath' = absModulePath root input.path;
+            module = getModule root modulePath';
+          in
+          module.args.options
+          // optionalAttrs (module ? impl) {
+            # Make sure that when the functor is called, we recompute the options, so any
+            # defaultFuncs are updated to use the "new" args passed via impl
+            __functor =
+              _: implArgs:
+              let
+                inputModuleArgs = {
+                  inherit (module.args) inputs;
+                  options = computeOptions {
+                    self = inputModuleArgs;
+                    errorPrefix = "while calling ${modulePath'}";
+                    inherit (module) options;
+                    args = implArgs;
+                  };
+                };
+              in
+              module inputModuleArgs.options;
+          }
+        ) module.inputs;
+        options = inspectImpl module (computeOptions {
+          self = final;
+          errorPrefix = "while computing ${modulePath} args";
+          inherit (module) options;
+          args = options.${modulePath} or { };
+        });
+      };
+    in
+    final;
+
   # Apply options to a module tree, returning a new module tree where modules can be called
   # with their inputs already wired up & options partially applied.
   applyTreeOptions =
@@ -338,44 +385,19 @@ let
           # Create submodule path string
           modulePath = "/" + concatStringsSep "/" modulePath';
 
-          # Module arguments
-          args' =
-            # Take args from resolved context if it's available there.
-            args.${modulePath} or
-            # fall back to computing
-            {
-              inputs = mapAttrs (
-                _: input:
-                let
-                  inputPath = absModulePath modulePath input.path;
-                  module = getModule tree' inputPath;
-                in
-                module.args.options
-                // optionalAttrs (module ? impl) {
-                  # Make sure that when the functor is called, we recompute the options, so any
-                  # defaultFuncs are updated to use the "new" args passed via impl
-                  __functor =
-                    _: implArgs:
-                    let
-                      args' = {
-                        inherit (module.args) inputs;
-                        options = computeOptions args' "while calling ${inputPath}" module.options implArgs;
-                      };
-                    in
-                    module args'.options;
-                }
-              ) module.inputs;
-              options = inspectImpl self (
-                computeOptions args' "while computing ${modulePath} args" module.options (
-                  options.${modulePath} or { }
-                )
-              );
-            };
-
           self =
             module
             // {
-              args = args';
+              # Take args from resolved context if it's available there.
+              args =
+                args.${modulePath} or (computeArgs {
+                  module = self;
+                  root = tree';
+                  inherit
+                    modulePath
+                    options
+                    ;
+                });
               # Recurse into child modules
               modules = mapAttrs (moduleName: recurse (modulePath' ++ [ moduleName ])) module.modules;
             }
