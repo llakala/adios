@@ -1,0 +1,3 @@
+{
+  nonexistant.option = true;
+}
