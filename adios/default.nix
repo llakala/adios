@@ -6,6 +6,10 @@ let
   # Helper functions for users, accessed through `adios.lib`
   lib = {
     importModules = import ./lib/importModules.nix { inherit adios; };
+    mergeFuncs = {
+      concatLists = { mutators }: builtins.concatLists (attrValues mutators);
+      mergeAttrsRecursively = import ./lib/mergeAttrsRecursively.nix;
+    };
   };
 
   inherit (builtins)
