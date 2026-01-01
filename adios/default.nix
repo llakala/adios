@@ -39,6 +39,8 @@ let
   # Call a function with only it's supported attributes.
   callFunction = fn: attrs: fn (intersectAttrs (functionArgs fn) attrs);
 
+  printList = list: "[${concatStringsSep ", " list}]";
+
   # Compute options from defaults & provided args
   computeOptions =
     let
@@ -58,6 +60,8 @@ let
       options,
       # Passed options
       args,
+      modulePath,
+      root ? null,
     }:
     listToAttrs (
       concatMap (
@@ -89,6 +93,42 @@ let
               # Compute value with args fixpoint
               inherit name;
               value = checkOption errorPrefix' option (callFunction option.defaultFunc self);
+            }
+          ]
+        else if (option.mutators or [ ]) != [ ] then
+          assert root != null;
+          [
+            {
+              inherit name;
+              value =
+                if types.modules.mutatedOption.verify option != null then
+                  throw ''
+                    ${errorPrefix}: in option '${name}': option listed mutators ${printList option.mutators},
+                    but a mergeFunc and/or mutatorType wasn't defined for the option
+                  ''
+                else
+                  checkOption errorPrefix' option (
+                    callFunction option.mergeFunc (
+                      self
+                      // {
+                        mutators = foldl' (
+                          acc:
+                          { resolution, mutatorPath }:
+                          # TODO: decide whether to error here, if a module didn't
+                          # mutate when it was supposed to
+                          if resolution.mutations ? ${modulePath}.${name} then
+                            acc
+                            // {
+                              ${mutatorPath} = checkOption (errorPrefix' + ": while checking type of mutator ${mutatorPath}") {
+                                type = option.mutatorType;
+                              } (callFunction resolution.mutations.${modulePath}.${name} resolution.args);
+                            }
+                          else
+                            acc
+                        ) { } (resolveMutators root modulePath (option.mutators or [ ]));
+                      }
+                    )
+                  );
             }
           ]
         # Compute nested options
@@ -170,6 +210,11 @@ let
     // (optionalAttrs (def ? name) {
       name = checkType "${errorPrefix}: while checking 'name'" types.string def.name;
     })
+    // (optionalAttrs (def ? mutations) {
+      mutations =
+        checkAttrsOf "${errorPrefix}: while checking 'mutations'" types.modules.mutation
+          def.mutations;
+    })
     // (optionalAttrs (def ? impl) {
       impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
     });
@@ -228,7 +273,7 @@ let
           if !module.modules ? ${tok} then
             throw ''
               Module path `${tok}` wasn't a child module of `${module.name or anonymousModuleName}`.
-              Valid children of `${module.name}`: [${concatStringsSep ", " (attrNames module.modules)}]
+              Valid children of `${module.name}`: ${printList (attrNames module.modules)}
             ''
           else
             module.modules.${tok}
@@ -289,6 +334,7 @@ let
             errorPrefix = "while computing ${modulePath} args";
             inherit (module) options;
             args = options.${modulePath} or { };
+            inherit modulePath;
           };
         }) resolution
         // memoArgs;
@@ -296,6 +342,7 @@ let
       inherit options resolution;
 
       # Module call results for each callable module in resolution
+      # TODO: actually use this somewhere other than `mkOverride`
       results =
         listToAttrs (
           concatMap (
@@ -348,6 +395,8 @@ let
                     errorPrefix = "while calling ${modulePath'}";
                     inherit (module) options;
                     args = implArgs;
+                    modulePath = modulePath';
+                    inherit root;
                   };
                 };
               in
@@ -359,10 +408,18 @@ let
           errorPrefix = "while computing ${modulePath} args";
           inherit (module) options;
           args = options.${modulePath} or { };
+          inherit modulePath root;
         });
       };
     in
     final;
+
+  resolveMutators =
+    root: modulePath: mutators:
+    map (mutatorPath: {
+      inherit mutatorPath;
+      resolution = getModule root mutatorPath;
+    }) (map (mutatorPath: absModulePath modulePath mutatorPath) mutators);
 
   # Apply options to a module tree, returning a new module tree where modules can be called
   # with their inputs already wired up & options partially applied.
@@ -419,6 +476,8 @@ let
                       errorPrefix = "while calling ${modulePath}";
                       inherit (module) options;
                       args = options';
+                      root = tree';
+                      inherit modulePath;
                     });
                   };
                 in
