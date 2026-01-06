@@ -74,6 +74,8 @@ let
     elem
     foldl'
     elemAt
+    length
+    genList
     ;
 
   isDerivation = value: isAttrs value && (value.type or null == "derivation");
@@ -502,4 +504,61 @@ fix (self: {
     self.typedef' name (
       v: if elem v elems then null else "'${toPretty v}' is not a member of enum '${name}'"
     );
+
+  /*
+    tuple<elems...>
+  */
+  tuple =
+    # List of tuple memeber types
+    members:
+    assert isList members;
+    let
+      name = "tuple<${concatStringsSep ", " (map (t: t.name) members)}>";
+      withErrorContext = addErrorContext "in ${name}";
+      len = length members;
+      funcs = map (t: t.verify) members;
+      verifyValue =
+        v: i:
+        if i == len then null
+        else if (elemAt funcs i) (elemAt v i) != null then ("in element ${toString i}: ${(elemAt funcs i) (elemAt v i)}")
+        else verifyValue v (i + 1);
+    in
+    self.typedef' name (
+      v:
+      if ! isList v then typeError name v
+      else if (length v) != len then "Expected tuple to have length ${toString len} but value '${toPretty v}' has length ${toString (length v)}"
+      else withErrorContext (verifyValue v 0)
+    );
+
+  /**
+    Create a wrapped type checked function.
+  */
+  defun =
+    name: args: T: f:
+    let
+      errorPrefix = "while calling '${name}'";
+    in
+    foldl'
+      (
+        fun: idx:
+        let
+          type = elemAt args idx;
+        in
+        value:
+        if type.verify value != null then
+          throw "${errorPrefix}: while checking argument ${toString idx}: ${type.verify value}"
+        else
+          fun value
+      )
+      (
+        arg:
+        let
+          value = f arg;
+          err = T.verify value;
+        in
+        if err != null then throw "${errorPrefix}: while checking return type: ${err}" else value
+      )
+      (
+        genList (i: i) (length args)
+      );
 })
