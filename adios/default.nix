@@ -6,26 +6,31 @@ let
   # Helper functions for users, accessed through `adios.lib`
   lib = {
     importModules = import ./lib/importModules.nix { inherit adios; };
+    merge = {
+      lists.concat = { mutators }: concatLists (attrValues mutators);
+      attrs.recursively = import ./lib/merge-attrs-recursively.nix;
+    };
   };
 
   inherit (builtins)
     attrNames
+    attrValues
+    concatLists
+    concatMap
+    concatStringsSep
+    filter
+    foldl'
+    functionArgs
+    genericClosure
+    head
+    intersectAttrs
+    isAttrs
+    isString
     listToAttrs
     mapAttrs
-    concatMap
-    isAttrs
-    genericClosure
-    filter
-    isString
     split
-    head
-    tail
-    foldl'
-    attrValues
     substring
-    concatStringsSep
-    intersectAttrs
-    functionArgs
+    tail
     ;
 
   optionalAttrs = cond: attrs: if cond then attrs else { };
