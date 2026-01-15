@@ -85,11 +85,7 @@ let
             (struct "file-source" (
               common
               // {
-                source = union [
-                  types.derivation
-                  types.path
-                  string
-                ];
+                source = types.pathLike;
                 inherit method;
                 recursive = optionalBool;
               }
