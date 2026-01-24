@@ -9,6 +9,7 @@ let
     merge = {
       lists.concat = { mutators }: concatLists (attrValues mutators);
       attrs.recursively = import ./lib/merge-attrs-recursively.nix;
+      general.withPrio = import ./lib/withPrio.nix;
     };
   };
 
