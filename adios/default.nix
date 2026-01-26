@@ -366,23 +366,25 @@ let
             // optionalAttrs (module ? impl) {
               # Wrap module call with computed args
               __functor =
+                self: implOptions:
                 let
                   passedOptions = options.${modulePath} or { };
-                in
-                self: options:
-                let
-                  # Concat passed options with options passed to tree eval
-                  options' = mergeOptionsUnchecked self.options passedOptions options;
-                  # Re-compute args fixpoint with passed args
-                  args = {
-                    inherit (self.args) inputs;
-                    options = computeOptions {
-                      inherit args;
-                      errorPrefix = "while calling ${modulePath}";
-                      inherit (module) options;
-                      passedArgs = options';
-                    };
-                  };
+                  args =
+                    if implOptions == { } then
+                      # Reuse existing args if impl isn't being passed anything new
+                      self.args
+                    else
+                      # Re-compute args fixpoint with passed args
+                      {
+                        inherit (self.args) inputs;
+                        options = computeOptions {
+                          inherit args;
+                          inherit (module) options;
+                          errorPrefix = "while calling ${modulePath}";
+                          # Concat passed options with options passed to tree eval
+                          passedArgs = mergeOptionsUnchecked self.options passedOptions implOptions;
+                        };
+                      };
                 in
                 # Call implementation
                 callFunction self.impl args;
