@@ -52,6 +52,26 @@ let
               null;
         };
 
+    mutatedOption =
+      (struct "optionBeingMutated" {
+        mutators = listOf string;
+        inherit type;
+        mutatorType = type;
+        mergeFunc = function;
+        description = optionalAttr string;
+        example = optionalAttr any;
+      }).override
+        {
+          verify =
+            option:
+            if option ? default then
+              "options that set 'mutators' shouldn't provide a 'default'"
+            else if option ? defaultFunc then
+              "options that set 'mutators' shouldn't provide a 'defaultFunc'"
+            else
+              null;
+        };
+
     subOptions = struct "subOptions" {
       inherit (modules) options;
       description = optionalAttr string;
@@ -59,12 +79,6 @@ let
       type = neverAttr;
       default = neverAttr;
       defaultFunc = neverAttr;
-    };
-
-    mutatedOption = struct "optionBeingMutated" {
-      mutators = listOf string;
-      mutatorType = type;
-      mergeFunc = function;
     };
 
     options = attrsOf (union [

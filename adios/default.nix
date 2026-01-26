@@ -70,8 +70,53 @@ let
           option = options.${name};
           errorPrefix' = "${errorPrefix}: in option '${name}'";
         in
+        if option ? mutators then
+          assert root != null;
+          [
+            {
+              inherit name;
+              value =
+                let
+                  err = types.modules.mutatedOption.verify option;
+                in
+                if err != null then
+                  throw "${errorPrefix}: in option '${name}': type error: ${err}"
+                else
+                  checkOption errorPrefix' option (
+                    callFunction option.mergeFunc (
+                      args
+                      // {
+                        mutators =
+                          (foldl' (
+                            acc:
+                            { resolution, mutatorPath }:
+                            # TODO: decide whether to error here, if a module didn't
+                            # mutate when it was supposed to
+                            if resolution.mutations ? ${modulePath}.${name} then
+                              acc
+                              // {
+                                ${mutatorPath} = checkOption (errorPrefix' + ": while checking type of mutator ${mutatorPath}") {
+                                  type = option.mutatorType;
+                                } (callFunction resolution.mutations.${modulePath}.${name} resolution.args);
+                              }
+                            else
+                              acc
+                          ) { } (resolveMutators root modulePath (option.mutators or [ ])))
+                          # If the mutators list is nonempty, have the value
+                          # passed in eval stage / option go through the
+                          # mergeFunc, under the current module's name.
+                          // optionalAttrs (passedArgs ? ${name}) {
+                            ${modulePath} = checkOption (errorPrefix' + ": while checking type of injected value") {
+                              type = option.mutatorType;
+                            } passedArgs.${name};
+                          };
+                      }
+                    )
+                  );
+            }
+          ]
         # Explicitly passed value
-        if passedArgs ? ${name} then
+        else if passedArgs ? ${name} then
           [
             {
               inherit name;
@@ -97,42 +142,6 @@ let
           ]
         # Gross hack - if you want a mergeFunc to be called without mutators,
         # set `mutators = []`.
-        else if option ? mutators then
-          assert root != null;
-          [
-            {
-              inherit name;
-              value =
-                if types.modules.mutatedOption.verify option != null then
-                  throw ''
-                    ${errorPrefix}: in option '${name}': option listed mutators ${option.mutators},
-                    but a mergeFunc and/or mutatorType wasn't defined for the option
-                  ''
-                else
-                  checkOption errorPrefix' option (
-                    callFunction option.mergeFunc (
-                      args
-                      // {
-                        mutators = foldl' (
-                          acc:
-                          { resolution, mutatorPath }:
-                          # TODO: decide whether to error here, if a module didn't
-                          # mutate when it was supposed to
-                          if resolution.mutations ? ${modulePath}.${name} then
-                            acc
-                            // {
-                              ${mutatorPath} = checkOption (errorPrefix' + ": while checking type of mutator ${mutatorPath}") {
-                                type = option.mutatorType;
-                              } (callFunction resolution.mutations.${modulePath}.${name} resolution.args);
-                            }
-                          else
-                            acc
-                        ) { } (resolveMutators root modulePath (option.mutators or [ ]));
-                      }
-                    )
-                  );
-            }
-          ]
         # Compute nested options
         else if option ? options then
           let
