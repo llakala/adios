@@ -279,7 +279,9 @@ let
           if !module.modules ? ${tok} then
             throw ''
               Module path `${tok}` is not a child module of `${module.name or anonymousModuleName}`.
-              Valid children of `${module.name or anonymousModuleName}`: [${concatStringsSep ", " (attrNames module.modules)}]
+              Valid children of `${
+                module.name or anonymousModuleName
+              }`: [${concatStringsSep ", " (attrNames module.modules)}]
             ''
           else
             module.modules.${tok}
@@ -391,7 +393,7 @@ let
       inherit options resolution;
 
       # Module call results for each callable module in resolution
-      # TODO: actually use this somewhere other than `mkOverride`
+      # TODO: actually use this
       results =
         listToAttrs (
           concatMap (
@@ -534,77 +536,6 @@ let
     in
     tree';
 
-  mkOverride =
-    root: prevEval:
-    {
-      # Updated options
-      options ? { },
-      # Whether to allow re-resolving
-      resolve ? true,
-    }:
-    optionsType.check options (
-      let
-        # TODO: Filter nulled out options
-        options' = prevEval.options // options;
-
-        # Names of all modules being updated
-        moduleNames = attrNames options;
-
-        # Names of all modules being referenced in the new options, but not present
-        # in the old module resolution.
-        # If this list is non-empty modules have to be re-resolved.
-        newModuleNames = filter (name: !prevEval.resolution ? ${name}) moduleNames;
-
-        # Module dependency resolution
-        resolution =
-          if newModuleNames != [ ] then
-            (
-              if resolve then
-                resolveTree root (attrNames options')
-              else
-                throw ''
-                  Module overriding caused re-resolving, which is disabled.
-                  Differing modules: ${concatStringsSep " " newModuleNames}
-                ''
-            )
-          else
-            prevEval.resolution;
-
-        # Resolve which module options/results needs to be invalidated
-        diff =
-          let
-            resolutionNames = attrNames resolution;
-          in
-          map (result: result.key) (genericClosure {
-            startSet = map (key: { inherit key; }) moduleNames;
-            operator =
-              { key }:
-              concatMap (
-                name: if resolution.${name}.inputs ? ${key} then [ { key = name; } ] else [ ]
-              ) resolutionNames;
-          });
-
-        # Overriden eval context
-        evalParams = evalModuleTree {
-          inherit resolution;
-          options = options';
-          memoArgs = removeAttrs prevEval.args diff;
-          memoResults = removeAttrs prevEval.results diff;
-        };
-        # Tree context
-        tree = applyTreeOptions {
-          inherit root;
-          options = options';
-          inherit (evalParams) args;
-        };
-      in
-      tree
-      // {
-        # Chained override function
-        override = mkOverride root evalParams;
-      }
-    );
-
   # Load a module tree recursively from root module
   loadTree =
     unloadedRoot:
@@ -615,22 +546,13 @@ let
       options ? { },
     }:
     let
-      # Overriden eval context
-      evalParams =
-        let
-          resolution = resolveTree root (attrNames options);
-        in
-        evalModuleTree { inherit resolution options; };
-      # Tree context
-      tree = applyTreeOptions {
-        inherit root options;
-        inherit (evalParams) args;
-      };
+      resolution = resolveTree root (attrNames options);
+      evalParams = evalModuleTree { inherit resolution options; };
     in
-    tree
-    // {
-      # Chained override function
-      override = mkOverride root evalParams;
+    # Tree context
+    applyTreeOptions {
+      inherit root options;
+      inherit (evalParams) args;
     };
 
   adios =

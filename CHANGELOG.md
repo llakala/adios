@@ -2,6 +2,9 @@ Any new features or breaking changes will be listed here.
 
 # 3/18/2026
 
+- `(adios root {}).override` has been removed. I've never seen anyone actually use this, and I'm generally unsure about
+  some of the design decisions of the eval stage.
+
 - `adios = (import sources.adios).adios` boilerplate is no longer required. Instead, one can just do `adios = import
   sources.adios`. This comes along with the removal of the `contrib/` modules. The old entrypoint now provides a
   warning.
