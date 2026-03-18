@@ -22,6 +22,6 @@ adios // {
   in
   ```
 
-  In the future, this will error.
+  In the future, the old method will error.
 '' adios;
 }
