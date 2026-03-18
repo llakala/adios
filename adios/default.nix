@@ -8,7 +8,10 @@ let
     importModules = import ./lib/importModules.nix { inherit adios; };
     merge = {
       lists.concat = { mutators }: concatLists (attrValues mutators);
+      strings.concatLines = { mutators }: concatStringsSep "\n" (attrValues mutators);
+      attrs.flat = import ./lib/merge-attrs-flat.nix;
       attrs.recursively = import ./lib/merge-attrs-recursively.nix;
+      general.withPrio = import ./lib/withPrio.nix;
     };
   };
 
