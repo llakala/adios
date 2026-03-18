@@ -6,29 +6,38 @@ let
   # Helper functions for users, accessed through `adios.lib`
   lib = {
     importModules = import ./lib/importModules.nix { inherit adios; };
+    merge = {
+      lists.concat = { mutators }: concatLists (attrValues mutators);
+      strings.concatLines = { mutators }: concatStringsSep "\n" (attrValues mutators);
+      attrs.flat = import ./lib/merge-attrs-flat.nix;
+      attrs.recursively = import ./lib/merge-attrs-recursively.nix;
+      general.withPrio = import ./lib/withPrio.nix;
+    };
   };
 
   inherit (builtins)
     attrNames
+    attrValues
+    concatLists
+    concatMap
+    concatStringsSep
+    filter
+    foldl'
+    functionArgs
+    genericClosure
+    head
+    intersectAttrs
+    isAttrs
+    isString
     listToAttrs
     mapAttrs
-    concatMap
-    isAttrs
-    genericClosure
-    filter
-    isString
     split
-    head
-    tail
-    foldl'
-    attrValues
     substring
-    concatStringsSep
-    intersectAttrs
-    functionArgs
+    tail
     ;
 
   optionalAttrs = cond: attrs: if cond then attrs else { };
+  optionals = cond: list: if cond then list else [ ];
 
   # A coarse grained options type for input validation
   optionsType = types.attrsOf types.attrs;
@@ -38,6 +47,8 @@ let
 
   # Call a function with only it's supported attributes.
   callFunction = fn: attrs: fn (intersectAttrs (functionArgs fn) attrs);
+
+  printList = list: "[${concatStringsSep ", " list}]";
 
   # Compute options from defaults & provided args
   computeOptions =
@@ -58,6 +69,8 @@ let
       options,
       # Passed options
       passedArgs,
+      modulePath,
+      root ? null,
     }:
     listToAttrs (
       concatMap (
@@ -66,8 +79,40 @@ let
           option = options.${name};
           errorPrefix' = "${errorPrefix}: in option '${name}'";
         in
+        if option ? mutators then
+          assert root != null;
+          [
+            {
+              inherit name;
+              value =
+                let
+                  err = types.modules.mutatedOption.verify option;
+                in
+                if err != null then
+                  throw "${errorPrefix'}: type error: ${err}"
+                else
+                  checkOption errorPrefix' option (
+                    callFunction option.mergeFunc (
+                      args
+                      // {
+                        mutators = getMutators {
+                          inherit
+                            name
+                            option
+                            passedArgs
+                            root
+                            checkOption
+                            modulePath
+                            ;
+                          errorPrefix = errorPrefix';
+                        };
+                      }
+                    )
+                  );
+            }
+          ]
         # Explicitly passed value
-        if passedArgs ? ${name} then
+        else if passedArgs ? ${name} then
           [
             {
               inherit name;
@@ -91,9 +136,12 @@ let
               value = checkOption errorPrefix' option (callFunction option.defaultFunc args);
             }
           ]
+        # Gross hack - if you want a mergeFunc to be called without mutators,
+        # set `mutators = []`.
         # Compute nested options
         else if option ? options then
           let
+            # TODO: how to handle this?
             value = computeOptions {
               inherit args;
               errorPrefix = errorPrefix';
@@ -170,6 +218,11 @@ let
     // (optionalAttrs (def ? name) {
       name = checkType "${errorPrefix}: while checking 'name'" types.string def.name;
     })
+    // (optionalAttrs (def ? mutations) {
+      mutations =
+        checkAttrsOf "${errorPrefix}: while checking 'mutations'" types.modules.mutation
+          def.mutations;
+    })
     // (optionalAttrs (def ? impl) {
       impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
     });
@@ -232,6 +285,49 @@ let
             module.modules.${tok}
         ) module (tail tokens);
 
+  getMutators =
+    {
+      name,
+      option,
+      passedArgs,
+      root,
+      checkOption,
+      modulePath,
+      errorPrefix,
+    }:
+    listToAttrs (
+      concatMap (
+        mutatorPath':
+        let
+          mutatorPath = absModulePath modulePath mutatorPath';
+          resolution = getModule root mutatorPath;
+        in
+        # TODO: decide whether to error here, if a module didn't
+        # mutate when it was supposed to
+        if resolution.mutations ? ${modulePath}.${name} then
+          [
+            {
+              name = mutatorPath;
+              value = checkOption ("${errorPrefix}: while checking type of mutator ${mutatorPath}") {
+                type = option.mutatorType;
+              } (callFunction resolution.mutations.${modulePath}.${name} resolution.args);
+            }
+          ]
+        else
+          [ ]
+      ) option.mutators
+      # If the mutators list is nonempty, have the value passed in eval stage
+      # option go through the mergeFunc, under the current module's name.
+      ++ optionals (passedArgs ? ${name}) [
+        {
+          name = modulePath;
+          value = checkOption ("${errorPrefix}: while checking type of injected value") {
+            type = option.mutatorType;
+          } passedArgs.${name};
+        }
+      ]
+    );
+
   # Resolve required module dependencies for defined config options
   resolveTree =
     scope: moduleNames:
@@ -283,9 +379,10 @@ let
         mapAttrs (modulePath: module: {
           inputs = mapAttrs (_: input: args.${input.path}.options) module.inputs;
           options = computeOptions {
+            inherit modulePath;
+            inherit (module) options;
             args = args.${modulePath};
             errorPrefix = "while computing ${modulePath} args";
-            inherit (module) options;
             passedArgs = options.${modulePath} or { };
           };
         }) resolution
@@ -294,6 +391,7 @@ let
       inherit options resolution;
 
       # Module call results for each callable module in resolution
+      # TODO: actually use this somewhere other than `mkOverride`
       results =
         listToAttrs (
           concatMap (
@@ -339,16 +437,17 @@ let
                 args =
                   # Reuse existing args if impl isn't being passed anything new
                   if implOptions == { } then
-                    inputModule.args.options
+                    inputModule.args
                   else
                     # If any new args are passed, recompute the options, so any
                     # defaultFuncs are updated
                     {
                       inherit (inputModule.args) inputs;
                       options = computeOptions {
-                        inherit args;
+                        inherit args root;
                         inherit (inputModule) options;
                         errorPrefix = "while calling ${inputPath}";
+                        modulePath = inputPath;
                         passedArgs = implOptions;
                       };
                     };
@@ -357,9 +456,9 @@ let
           }
         ) module.inputs;
         options = inspectImpl module (computeOptions {
-          inherit args;
-          errorPrefix = "while computing ${modulePath} args";
+          inherit args modulePath root;
           inherit (module) options;
+          errorPrefix = "while computing ${modulePath} args";
           passedArgs = passedArgs.${modulePath} or { };
         });
       };
@@ -416,8 +515,9 @@ let
                       {
                         inherit (self.args) inputs;
                         options = inspectImpl self (computeOptions {
-                          inherit args;
+                          inherit args modulePath;
                           inherit (module) options;
+                          root = tree';
                           errorPrefix = "while calling ${modulePath}";
                           # Concat passed options with options passed to tree eval
                           passedArgs = mergeOptionsUnchecked self.options passedOptions implOptions;
