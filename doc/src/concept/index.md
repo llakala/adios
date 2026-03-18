@@ -11,8 +11,9 @@ Adios module definitions are plain Nix attribute sets.
 The module definition then needs to be _loaded_ by the adios loader function:
 ``` nix
 adios {
-  name = "my-module";
-}
+  options = {};
+  impl = { options }: some-result;
+} {}
 ```
 Module loading is responsible for
 

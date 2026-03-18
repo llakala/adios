@@ -1,6 +1,9 @@
 Any new features or breaking changes will be listed here.
 
 # 3/18/2026
+- The `name` parameter of Adios modules now does absolutely nothing. Originally, names actually had a semantic meaning.
+  This has been removed for a long time, but names still slightly improved the state of error logging. Now, they do
+  nothing, and won't be included at all when loading a module.
 
 - `(adios root {}).override` has been removed. I've never seen anyone actually use this, and I'm generally unsure about
   some of the design decisions of the eval stage.

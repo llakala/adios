@@ -1,7 +1,5 @@
 { types, ... }:
 {
-  name = "callable-module";
-
   options = {
     foo = {
       type = types.string;

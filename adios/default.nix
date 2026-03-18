@@ -42,9 +42,6 @@ let
   # A coarse grained options type for input validation
   optionsType = types.attrsOf types.attrs;
 
-  # Default in error messages when no name is provided
-  anonymousModuleName = "<anonymous>";
-
   # Call a function with only it's supported attributes.
   callFunction = fn: attrs: fn (intersectAttrs (functionArgs fn) attrs);
 
@@ -215,9 +212,6 @@ let
         def.inputs or { }
       );
     }
-    // (optionalAttrs (def ? name) {
-      name = checkType "${errorPrefix}: while checking 'name'" types.string def.name;
-    })
     // (optionalAttrs (def ? mutations) {
       mutations =
         checkAttrsOf "${errorPrefix}: while checking 'mutations'" types.modules.mutation
@@ -278,13 +272,11 @@ let
           module: tok:
           if !module.modules ? ${tok} then
             throw ''
-              Module path `${tok}` is not a child module of `${module.name or anonymousModuleName}`.
-              Valid children of `${
-                module.name or anonymousModuleName
-              }`: [${concatStringsSep ", " (attrNames module.modules)}]
+              Module path `${tok}` is not a child module of `${module.name or "root"}`.
+              Valid children of `${module.name or "root"}`: [${concatStringsSep ", " (attrNames module.modules)}]
             ''
           else
-            module.modules.${tok}
+            module.modules.${tok} // { name = tok; }
         ) module (tail tokens);
 
   getMutators =
@@ -557,7 +549,6 @@ let
 
   adios =
     (loadModule {
-      name = "adios";
       inherit types lib;
     })
     // {
