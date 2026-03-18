@@ -1,4 +1,6 @@
 {
   description = "Adios";
-  outputs = { ... }: import ./.;
+  outputs = { ... }: {
+    adios = import ./adios;
+  };
 }
