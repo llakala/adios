@@ -6,7 +6,7 @@
 let
   inherit (lib) toUpper substring stringLength;
 
-  types = import ./default.nix { inherit lib; };
+  types = import ./types.nix;
 
   capitalise = s: toUpper (substring 0 1 s) + (substring 1 (stringLength s) s);
 
@@ -97,6 +97,24 @@ lib.fix (
       };
     };
 
+    pathLike = {
+      testInvalid = {
+        expr = types.pathLike.verify 1;
+        expected = "Expected type 'pathLike' but value '1' is of type 'int'";
+      };
+
+      testPath = {
+        expr = types.pathLike.verify ./.;
+        expected = null;
+      };
+      # I'd like to add testDerivation, but the tests dont like needing
+      # <nixpkgs>
+      testString = {
+        expr = types.pathLike.verify "example string";
+        expected = null;
+      };
+    };
+
     derivation = {
       testInvalid = {
         expr = types.derivation.verify { };
@@ -178,6 +196,18 @@ lib.fix (
 
       testValid = {
         expr = types.bool.verify true;
+        expected = null;
+      };
+    };
+
+    null = {
+      testInvalid = {
+        expr = types.null.verify "x";
+        expected = "Expected type 'null' but value '\"x\"' is of type 'string'";
+      };
+
+      testValid = {
+        expr = types.null.verify null;
         expected = null;
       };
     };
@@ -492,46 +522,59 @@ lib.fix (
         };
 
         testInvalidLength = {
-          expr = testTuple.verify [];
+          expr = testTuple.verify [ ];
           expected = "Expected tuple to have length 2 but value '[ ]' has length 0";
         };
 
         testInvalidType = {
-          expr = testTuple.verify [ 123 "xyz" ];
+          expr = testTuple.verify [
+            123
+            "xyz"
+          ];
           expected = "in tuple<string, int>: in element 0: Expected type 'string' but value '123' is of type 'int'";
         };
 
         testInvalidTypeTail = {
-          expr = testTuple.verify [ "xyz" "123" ];
+          expr = testTuple.verify [
+            "xyz"
+            "123"
+          ];
           expected = "in tuple<string, int>: in element 1: Expected type 'int' but value '\"123\"' is of type 'string'";
         };
 
         testValid = {
-          expr = testTuple.verify [ "xyz" 123 ];
+          expr = testTuple.verify [
+            "xyz"
+            123
+          ];
           expected = null;
         };
       };
 
-    defun = let
-      fn = types.defun "fn" [ types.str ] types.str (s: s + "-checked");
-    in {
-      testOk = {
-        expr = fn "foo";
-        expected = "foo-checked";
-      };
+    defun =
+      let
+        fn = types.defun "fn" [ types.str ] types.str (s: s + "-checked");
+      in
+      {
+        testOk = {
+          expr = fn "foo";
+          expected = "foo-checked";
+        };
 
-      testWrongArgType = {
-        expr = fn 1;
-        expectedError.type = "ThrownError";
-      };
+        testWrongArgType = {
+          expr = fn 1;
+          expectedError.type = "ThrownError";
+        };
 
-      testWrongArgReturn = let
-        fn = types.defun "fn" [ types.str ] types.str (_: 2);
-      in {
-        expr = fn "foo";
-        expectedError.type = "ThrownError";
+        testWrongArgReturn =
+          let
+            fn = types.defun "fn" [ types.str ] types.str (_: 2);
+          in
+          {
+            expr = fn "foo";
+            expectedError.type = "ThrownError";
+          };
       };
-    };
 
     recursiveTypes = {
       struct =
