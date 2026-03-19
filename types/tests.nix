@@ -1,3 +1,4 @@
+# run `nix-unit types/tests.nix` to see if the tests pass
 {
   pkgs ? import <nixpkgs> { },
   lib ? pkgs.lib,
