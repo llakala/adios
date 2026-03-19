@@ -357,13 +357,13 @@ fix (self: {
 
     - Unknown attribute names
 
-    By default, unknown attribute names are allowed.
+    By default, unknown attribute names are not allowed.
 
-    It is possible to override this by specifying `unknown`.
-    ``` nix
+    It is possible to override this by specifying `unknown` on struct creation:
+    ```nix
     (korora.struct "myStruct" {
       foo = types.string;
-    }).override { unknown = false; }
+    }).override { unknown = true; }
     ```
 
     This means that
@@ -373,7 +373,7 @@ fix (self: {
       baz = "hello";
     }
     ```
-    is normally valid, but not when `unknown` is set to `false`.
+    is normally invalid, but works when `unknown` is set to `true`.
 
     Because Nix lacks primitive operations to iterate over attribute sets dynamically without
     allocation this function allocates one intermediate attribute set per struct verification.
@@ -405,7 +405,7 @@ fix (self: {
       mkStruct' =
         {
           total ? true,
-          unknown ? true,
+          unknown ? false,
           verify ? null,
         }:
         assert isBool total;

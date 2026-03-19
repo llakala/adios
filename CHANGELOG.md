@@ -1,5 +1,16 @@
 Any new features or breaking changes will be listed here.
 
+# 3/19/2026
+
+- The value of `unknown` for structs now defaults to false. This means that structs will reject any field that they
+  don't specify. To achieve the old behavior, the struct can be overridden:
+  ```nix
+  (types.struct "structName" {
+    foo = types.int;
+    bar = types.string;
+  }).override { unknown = true; }
+  ```
+
 # 3/18/2026
 - The `name` parameter of Adios modules now does absolutely nothing. Originally, names actually had a semantic meaning.
   This has been removed for a long time, but names still slightly improved the state of error logging. Now, they do

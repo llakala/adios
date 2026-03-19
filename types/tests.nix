@@ -301,11 +301,11 @@ lib.fix (
     intersection =
       let
         struct1 = types.struct "struct1" {
-          a = types.str;
+          a = types.number;
         };
 
         struct2 = types.struct "struct2" {
-          b = types.str;
+          a = types.int;
         };
 
         testIntersection = types.intersection [
@@ -316,8 +316,7 @@ lib.fix (
       {
         testValid = {
           expr = testIntersection.verify {
-            a = "foo";
-            b = "bar";
+            a = 1;
           };
           expected = null;
         };
@@ -377,8 +376,7 @@ lib.fix (
             };
 
         testStructNonTotal = testStruct.override { total = false; };
-        testStructWithoutUnknown = testStruct.override { unknown = false; };
-
+        testStructWithUnknown = testStruct.override { unknown = true; };
       in
       {
         testValid = {
@@ -394,10 +392,7 @@ lib.fix (
         };
 
         testNonTotal = {
-          expr = testStructNonTotal.verify {
-            foo = "bar";
-            unknown = "is allowed";
-          };
+          expr = testStructNonTotal.verify {};
           expected = null;
         };
 
@@ -410,7 +405,7 @@ lib.fix (
         };
 
         testUnknownAttrNotAllowed = {
-          expr = testStructWithoutUnknown.verify {
+          expr = testStruct.verify {
             foo = "bar";
             bar = "foo";
           };
@@ -418,7 +413,7 @@ lib.fix (
         };
 
         testUnknownAttr = {
-          expr = testStruct.verify {
+          expr = testStructWithUnknown.verify {
             foo = "bar";
             bar = "foo";
           };
