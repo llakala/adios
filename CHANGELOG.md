@@ -2,6 +2,10 @@ Any new features or breaking changes will be listed here.
 
 # 3/19/2026
 
+- The internal path of korora (the Adios type system) has been changed. Uses of `${sources.adios}/types/types.nix`
+  should be changed to `${sources.adios}/korora`. This is very unlikely to affect you, unless you're vendoring korora
+  specifically from Adios.
+
 - The value of `unknown` for structs now defaults to false. This means that structs will reject any field that they
   don't specify. To achieve the old behavior, the struct can be overridden:
   ```nix

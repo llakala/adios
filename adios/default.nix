@@ -1,6 +1,6 @@
 let
   types = import ./types.nix {
-    korora = import ../types/types.nix;
+    korora = import ../korora;
   };
 
   # Helper functions for users, accessed through `adios.lib`

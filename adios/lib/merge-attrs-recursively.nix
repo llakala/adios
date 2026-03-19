@@ -10,7 +10,7 @@ let
     ;
   isDerivation = value: (value.type or null) == "derivation";
 
-  inherit ((import ../../types/lib.nix)) toPretty;
+  inherit ((import ../../korora/lib.nix)) toPretty;
 
   f = zipAttrsWith (
     key: values:

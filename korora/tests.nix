@@ -1,4 +1,4 @@
-# run `nix-unit types/tests.nix` to see if the tests pass
+# run `nix-unit korora/tests.nix` to see if the tests pass
 {
   pkgs ? import <nixpkgs> { },
   lib ? pkgs.lib,
@@ -7,7 +7,7 @@
 let
   inherit (lib) toUpper substring stringLength;
 
-  types = import ./types.nix;
+  types = import ./default.nix;
 
   capitalise = s: toUpper (substring 0 1 s) + (substring 1 (stringLength s) s);
 
