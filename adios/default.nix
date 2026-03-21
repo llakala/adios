@@ -382,8 +382,6 @@ let
         }) resolution
         // memoArgs;
 
-      inherit options resolution;
-
       # Module call results for each callable module in resolution
       # TODO: actually use this
       results =
