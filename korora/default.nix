@@ -88,12 +88,12 @@ let
 
   typeError = name: v: "Expected type '${name}' but value '${toPretty v}' is of type '${typeOf v}'";
 
-  # Builtin primitive checkers return a bool for indicating errors but we return option<str>
+  # Builtin primitive checkers return a bool for indicating errors but we return option<string>
   wrapBoolVerify =
     name: verify: v:
     if verify v then null else typeError name v;
 
-  # Wrap builtins.all to return option<str>, with string on error.
+  # Wrap builtins.all to return option<string>, with string on error.
   all' =
     func: list:
     if all (v: func v == null) list then
@@ -138,7 +138,7 @@ fix (self: {
     self.typedef' name (wrapBoolVerify name verify);
 
   /*
-    Declare a custom type using an option<str> function.
+    Declare a custom type using an option<string> function.
   */
   typedef' =
     # Name of the type as a string
@@ -160,11 +160,6 @@ fix (self: {
     String
   */
   string = self.typedef "string" isString;
-
-  /*
-    Type alias for string
-  */
-  str = self.string;
 
   /*
     Any

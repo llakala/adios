@@ -1,5 +1,10 @@
 Any new features or breaking changes will be listed here.
 
+# 3/21/2026
+
+- `types.str`, an alias for `types.string`, has been removed. I don't think this is a necessary alias, and I'd prefer to
+  see everyone congregate on the string form.
+
 # 3/19/2026
 
 - The internal path of korora (the Adios type system) has been changed. Uses of `${sources.adios}/types/types.nix`

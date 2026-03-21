@@ -33,16 +33,15 @@ lib.fix (
   addCoverage types {
     string = {
       testInvalid = {
-        expr = types.str.verify 1;
+        expr = types.string.verify 1;
         expected = "Expected type 'string' but value '1' is of type 'int'";
       };
 
       testValid = {
-        expr = types.str.verify "Hello";
+        expr = types.string.verify "Hello";
         expected = null;
       };
     };
-    str = self.string;
 
     # Dummy out for coverage
     typedef = {
@@ -239,7 +238,7 @@ lib.fix (
 
     listOf =
       let
-        testListOf = types.listOf types.str;
+        testListOf = types.listOf types.string;
       in
       {
         testValid = {
@@ -260,7 +259,7 @@ lib.fix (
 
     attrsOf =
       let
-        testAttrsOf = types.attrsOf types.str;
+        testAttrsOf = types.attrsOf types.string;
       in
       {
         testValid = {
@@ -285,7 +284,7 @@ lib.fix (
 
     union =
       let
-        testUnion = types.union [ types.str ];
+        testUnion = types.union [ types.string ];
       in
       {
         testValid = {
@@ -342,7 +341,7 @@ lib.fix (
 
     option =
       let
-        testOption = types.option types.str;
+        testOption = types.option types.string;
       in
       {
         testValidString = {
@@ -507,7 +506,7 @@ lib.fix (
     tuple =
       let
         testTuple = types.tuple [
-          types.str
+          types.string
           types.int
         ];
       in
@@ -549,7 +548,7 @@ lib.fix (
 
     defun =
       let
-        fn = types.defun "fn" [ types.str ] types.str (s: s + "-checked");
+        fn = types.defun "fn" [ types.string ] types.string (s: s + "-checked");
       in
       {
         testOk = {
@@ -564,7 +563,7 @@ lib.fix (
 
         testWrongArgReturn =
           let
-            fn = types.defun "fn" [ types.str ] types.str (_: 2);
+            fn = types.defun "fn" [ types.string ] types.string (_: 2);
           in
           {
             expr = fn "foo";

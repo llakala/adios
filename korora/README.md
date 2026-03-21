@@ -69,7 +69,7 @@ Declare a custom type using a bool function
 
 ## `lib.types.typedef'`
 
-Declare a custom type using an option<str> function.
+Declare a custom type using an option<string> function.
 
 `name`
 
@@ -84,10 +84,6 @@ Declare a custom type using an option<str> function.
 ## `lib.types.string`
 
 String
-
-## `lib.types.str`
-
-Type alias for string
 
 ## `lib.types.any`
 
