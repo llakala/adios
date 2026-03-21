@@ -2,6 +2,25 @@ Any new features or breaking changes will be listed here.
 
 # 3/21/2026
 
+- Basic submodule support is now fixed. This originates back to the original commit of adios - and it's so old and
+  unused that I didn't understand it until I looked at the old tests. But Adios actually supports "sub-options":
+  ```nix
+  { types, ... }:
+  {
+    options.foo = {
+      options.bar = {
+        type = types.string;
+        default = "demo";
+      };
+    };
+
+    impl = { options }: options.foo.bar;
+  }
+  ```
+  For most cases, I recommend sticking with structs over sub-options. However, a module providing a complex API
+  underneath some attribute may benefit from this. Submodule support is something I hope to improve in the future, so
+  an option can point to the full API of some input module.
+
 - `types.str`, an alias for `types.string`, has been removed. I don't think this is a necessary alias, and I'd prefer to
   see everyone congregate on the string form.
 

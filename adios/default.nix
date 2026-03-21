@@ -76,6 +76,8 @@ let
           option = options.${name};
           errorPrefix' = "${errorPrefix}: in option '${name}'";
         in
+        # Gross hack - if you want to always go through the mergeFunc,
+        # set `mutators = []`.
         if option ? mutators then
           assert root != null;
           [
@@ -108,6 +110,18 @@ let
                   );
             }
           ]
+        # Compute nested options
+        else if option ? options then
+          let
+            value = computeOptions {
+              inherit args modulePath;
+              errorPrefix = errorPrefix';
+              options = option.options;
+              passedArgs = passedArgs.${name} or { };
+            };
+          in
+          # Only return a value if suboptions actually returned anything
+          if value != { } then [ { inherit name value; } ] else [ ]
         # Explicitly passed value
         else if passedArgs ? ${name} then
           [
@@ -133,22 +147,6 @@ let
               value = checkOption errorPrefix' option (callFunction option.defaultFunc args);
             }
           ]
-        # Gross hack - if you want a mergeFunc to be called without mutators,
-        # set `mutators = []`.
-        # Compute nested options
-        else if option ? options then
-          let
-            # TODO: how to handle this?
-            value = computeOptions {
-              inherit args;
-              errorPrefix = errorPrefix';
-              options = options.${name};
-              passedArgs = passedArgs.${name} or { };
-            };
-          in
-          # Only return a value if suboptions actually returned anything
-          if value != { } then [ { inherit name value; } ] else [ ]
-        # Nothing passed & no default. Leave unset.
         else
           [ ]
       ) (attrNames options)
