@@ -252,11 +252,11 @@ let
     pwd: path: toString (if substring 0 1 path == "/" then /. + path else /. + pwd + "/${path}");
 
   # Get a module by it's / delimited path
-  getModule =
-    module: name:
+  fetchModule =
+    scope: name:
     assert name != "";
     if name == "/" then
-      module
+      scope
     else
       let
         tokens = splitString "/" name;
@@ -277,7 +277,7 @@ let
             ''
           else
             module.modules.${tok} // { name = tok; }
-        ) module (tail tokens);
+        ) scope (tail tokens);
 
   getMutators =
     {
@@ -294,7 +294,7 @@ let
         mutatorPath':
         let
           mutatorPath = absModulePath modulePath mutatorPath';
-          resolution = getModule root mutatorPath;
+          resolution = fetchModule root mutatorPath;
         in
         # TODO: decide whether to error here, if a module didn't
         # mutate when it was supposed to
@@ -329,7 +329,7 @@ let
       map
         (x: {
           name = x.key;
-          value = getModule scope x.key;
+          value = fetchModule scope x.key;
         })
         (genericClosure {
           # Get startSet from passed config
@@ -341,7 +341,7 @@ let
             { key }:
             map (input: {
               key = absModulePath key input.path;
-            }) (attrValues (getModule scope key).inputs);
+            }) (attrValues (fetchModule scope key).inputs);
         })
     );
 
@@ -419,7 +419,7 @@ let
           _: input:
           let
             inputPath = absModulePath modulePath input.path;
-            inputModule = getModule root inputPath;
+            inputModule = fetchModule root inputPath;
           in
           inputModule.args.options
           // optionalAttrs (inputModule ? impl) {
