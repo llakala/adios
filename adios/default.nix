@@ -495,7 +495,7 @@ let
             // optionalAttrs (module ? impl) {
               # Wrap module call with computed args
               __functor =
-                self: implOptions:
+                _: implOptions:
                 let
                   passedOptions = options.${modulePath} or { };
                   args =
