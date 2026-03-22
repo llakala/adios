@@ -27,7 +27,6 @@ let
     genericClosure
     head
     intersectAttrs
-    isAttrs
     isString
     listToAttrs
     mapAttrs
@@ -39,24 +38,35 @@ let
   optionalAttrs = cond: attrs: if cond then attrs else { };
   optionals = cond: list: if cond then list else [ ];
 
-  # A coarse grained options type for input validation
-  optionsType = types.attrsOf types.attrs;
-
   # Call a function with only it's supported attributes.
   callFunction = fn: attrs: fn (intersectAttrs (functionArgs fn) attrs);
 
   printList = list: "[${concatStringsSep ", " list}]";
 
+  # Check a single type with error prefix
+  checkType =
+    errorPrefix: type: value:
+    let
+      err = type.verify value;
+    in
+    if err == null then value else throw "${errorPrefix}: ${err}";
+
+  # Lazy type check an attrset
+  checkAttrsOfType =
+    errorPrefix: type: value:
+    checkType errorPrefix types.attrs (
+      mapAttrs (name: checkType (errorPrefix + "in attribute '${name}'") type) value
+    );
+
+  checkOption =
+    errorPrefix: option: value:
+    let
+      err = option.type.verify value;
+    in
+    if err != null then (throw "${errorPrefix}: type error: ${err}") else value;
+
   # Compute options from defaults & provided args
   computeOptions =
-    let
-      checkOption =
-        errorPrefix: option: value:
-        let
-          err = option.type.verify value;
-        in
-        if err != null then (throw "${errorPrefix}: ${err}") else value;
-    in
     {
       # Computed args fixpoint
       args,
@@ -83,31 +93,23 @@ let
           [
             {
               inherit name;
-              value =
-                let
-                  err = types.modules.mutatedOption.verify option;
-                in
-                if err != null then
-                  throw "${errorPrefix'}: type error: ${err}"
-                else
-                  checkOption errorPrefix' option (
-                    callFunction option.mergeFunc (
-                      args
-                      // {
-                        mutators = getMutators {
-                          inherit
-                            name
-                            option
-                            passedArgs
-                            root
-                            checkOption
-                            modulePath
-                            ;
-                          errorPrefix = errorPrefix';
-                        };
-                      }
-                    )
-                  );
+              value = checkOption errorPrefix' option (
+                callFunction option.mergeFunc (
+                  args
+                  // {
+                    mutators = getMutators {
+                      inherit
+                        name
+                        option
+                        passedArgs
+                        root
+                        modulePath
+                        ;
+                      errorPrefix = errorPrefix';
+                    };
+                  }
+                )
+              );
             }
           ]
         # Compute nested options
@@ -152,41 +154,6 @@ let
       ) (attrNames options)
     );
 
-  # Lazy typecheck options
-  checkOptionsType =
-    errorPrefix: options:
-    mapAttrs (
-      name: option:
-      if option ? options then
-        { options = checkOptionsType "${errorPrefix}: in option '${name}'" option.options; }
-      else
-        let
-          err = types.modules.option.verify option;
-        in
-        if err != null then throw "${errorPrefix}: in option '${name}': type error: ${err}" else option
-    ) options;
-
-  # Lazy type check an attrset
-  checkAttrsOf =
-    errorPrefix: type: value:
-    let
-      err = type.verify value;
-    in
-    if err == null then
-      value
-    else if isAttrs value then
-      mapAttrs (name: checkAttrsOf "${errorPrefix}: in attr '${name}'" type) value
-    else
-      throw "${errorPrefix}: in attr: ${err}";
-
-  # Check a single type with error prefix
-  checkType =
-    errorPrefix: type: value:
-    let
-      err = type.verify value;
-    in
-    if err == null then value else throw "${errorPrefix}: ${err}";
-
   # Type check a module lazily
   loadModule =
     def:
@@ -196,28 +163,32 @@ let
     in
     # The loaded module instance
     {
-      options = checkOptionsType "${errorPrefix}: while checking 'options'" (def.options or { });
+      options = checkAttrsOfType "${errorPrefix}: while checking 'options'" types.modules.option (
+        def.options or { }
+      );
 
       modules = mapAttrs (_: loadModule) (def.modules or { });
 
-      lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib (def.lib or { });
-
-      types = checkAttrsOf "${errorPrefix}: while checking 'types'" types.modules.typedef (
+      types = checkAttrsOfType "${errorPrefix}: while checking 'types'" types.modules.typedef (
         def.types or { }
       );
 
-      inputs = checkAttrsOf "${errorPrefix}: while checking 'inputs'" types.modules.input (
+      inputs = checkAttrsOfType "${errorPrefix}: while checking 'inputs'" types.modules.input (
         def.inputs or { }
       );
     }
     // (optionalAttrs (def ? mutations) {
       mutations =
-        checkAttrsOf "${errorPrefix}: while checking 'mutations'" types.modules.mutation
+        checkAttrsOfType "${errorPrefix}: while checking 'mutations'" types.modules.mutation
           def.mutations;
     })
     // (optionalAttrs (def ? impl) {
       impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
-    });
+    })
+    // (optionalAttrs (def ? lib) {
+      lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib def.lib;
+    })
+    ;
 
   # Merge lhs & rhs recursing into suboptions
   mergeOptionsUnchecked =
@@ -283,7 +254,6 @@ let
       option,
       passedArgs,
       root,
-      checkOption,
       modulePath,
       errorPrefix,
     }:
@@ -300,7 +270,7 @@ let
           [
             {
               name = mutatorPath;
-              value = checkOption ("${errorPrefix}: while checking type of mutator ${mutatorPath}") {
+              value = checkOption "${errorPrefix}: while checking type of mutator ${mutatorPath}" {
                 type = option.mutatorType;
               } (callFunction resolution.mutations.${modulePath}.${name} resolution.args);
             }
@@ -313,7 +283,7 @@ let
       ++ optionals (passedArgs ? ${name}) [
         {
           name = modulePath;
-          value = checkOption ("${errorPrefix}: while checking type of injected value") {
+          value = checkOption "${errorPrefix}: while checking type of injected value" {
             type = option.mutatorType;
           } passedArgs.${name};
         }

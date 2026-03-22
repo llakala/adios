@@ -9,7 +9,6 @@ let
     function
     listOf
     never
-    option
     optionalAttr
     string
     struct
@@ -32,15 +31,12 @@ let
           typesT
         ]).verify;
 
-    option =
+    nonMutableOption =
       (struct "option" {
         inherit type;
         description = optionalAttr string;
         default = optionalAttr any;
         defaultFunc = optionalAttr function;
-        mutators = optionalAttr (listOf string);
-        mutatorType = optionalAttr type;
-        mergeFunc = optionalAttr function;
         example = optionalAttr any;
       }).override
         {
@@ -52,25 +48,16 @@ let
               null;
         };
 
-    mutatedOption =
-      (struct "optionBeingMutated" {
-        mutators = listOf string;
-        inherit type;
-        mutatorType = type;
-        mergeFunc = function;
-        description = optionalAttr string;
-        example = optionalAttr any;
-      }).override
-        {
-          verify =
-            option:
-            if option ? default then
-              "options that set 'mutators' shouldn't provide a 'default'"
-            else if option ? defaultFunc then
-              "options that set 'mutators' shouldn't provide a 'defaultFunc'"
-            else
-              null;
-        };
+    mutableOption = struct "mutableOption" {
+      inherit type;
+      mutators = optionalAttr (listOf string);
+      mutatorType = type;
+      mergeFunc = function;
+      description = optionalAttr string;
+      example = optionalAttr any;
+      default = optionalAttr any;
+      defaultFunc = optionalAttr function;
+    };
 
     subOptions = struct "subOptions" {
       inherit (modules) options;
@@ -81,25 +68,25 @@ let
       defaultFunc = neverAttr;
     };
 
-    options = attrsOf (union [
-      modules.option
+    option = union [
+      modules.nonMutableOption
+      modules.mutableOption
       modules.subOptions
-    ]);
+    ];
 
-    input = option (
-      attrsOf (
-        struct "input" {
-          # Note: The lack of a type for an input means no type checking done.
-          type = optionalAttr type;
-          # TODO: Narrow permitted chars
-          path = typedef "pathstring" isString;
-        }
-      )
-    );
+    input = struct "input" {
+      # Note: The lack of a type for an input means no type checking done.
+      type = optionalAttr type;
+      # TODO: Narrow permitted chars
+      path = typedef "pathstring" isString;
+    };
 
-    inputs = attrsOf modules.input;
     mutation = attrsOf function;
-    lib = attrs;
+
+    lib = union [
+      function
+      (attrsOf modules.lib)
+    ];
   };
 
 in
