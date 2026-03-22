@@ -196,7 +196,7 @@ let
     in
     # The loaded module instance
     {
-      options = checkOptionsType "${errorPrefix} options definition" (def.options or { });
+      options = checkOptionsType "${errorPrefix}: while checking 'options'" (def.options or { });
 
       modules = mapAttrs (_: loadModule) (def.modules or { });
 
@@ -374,7 +374,7 @@ let
             inherit modulePath;
             inherit (module) options;
             args = args.${modulePath};
-            errorPrefix = "while computing ${modulePath} args";
+            errorPrefix = "while computing eval stage: while computing ${modulePath} args";
             passedArgs = options.${modulePath} or { };
           };
         }) resolution
@@ -436,7 +436,7 @@ let
                       options = computeOptions {
                         inherit args root;
                         inherit (inputModule) options;
-                        errorPrefix = "while calling ${inputPath}";
+                        errorPrefix = "while computing ${modulePath} args: while calling input ${inputPath}";
                         modulePath = inputPath;
                         passedArgs = implOptions;
                       };
