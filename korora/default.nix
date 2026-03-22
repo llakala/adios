@@ -268,16 +268,17 @@ fix (self: {
     # Attribute value type
     t:
     let
-      typename = "attrsOf<${t.name}>";
+      name = "attrsOf<${t.name}>";
+      inherit (t) verify;
     in
-    self.typedef' typename (
+    self.typedef' name (
       attrs:
       if !isAttrs attrs then
-        typeError typename attrs
+        typeError name attrs
       else
         let
           errors = concatMap (key: [
-            (addErrorContext "in ${typename} value: in attribute '${key}'" (t.verify attrs.${key}))
+            (addErrorContext "in ${name} value: in attribute '${key}'" (verify attrs.${key}))
           ]) (attrNames attrs);
           # If an error was found, find the first error to return.
           recurse =
