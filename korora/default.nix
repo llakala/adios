@@ -87,12 +87,12 @@ let
 
   typeError = name: v: "Expected type '${name}' but value '${toPretty v}' failed the type check";
 
-  # Builtin primitive checkers return a bool for indicating errors but we return option<string>
+  # Builtin primitive checkers return a bool for indicating errors but we return optional<string>
   wrapBoolVerify =
     name: verify: v:
     if verify v then null else typeError name v;
 
-  # Wrap builtins.all to return option<string>, with string on error.
+  # Wrap builtins.all to return optional<string>, with string on error.
   all' =
     func: list:
     if all (v: func v == null) list then
@@ -137,7 +137,7 @@ fix (self: {
     self.typedef' name (wrapBoolVerify name verify);
 
   /*
-    Declare a custom type using an option<string> function.
+    Declare a custom type using an optional<string> function.
   */
   typedef' =
     # Name of the type as a string
@@ -236,13 +236,13 @@ fix (self: {
   );
 
   /*
-    Option<t>
+    optional<t>
   */
-  option =
+  optional =
     # Null or t
     t:
     let
-      name = "option<${t.name}>";
+      name = "optional<${t.name}>";
       inherit (t) verify;
       withErrorContext = addErrorContext "in ${name}";
     in

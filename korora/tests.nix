@@ -339,9 +339,9 @@ lib.fix (
       };
     };
 
-    option =
+    optional =
       let
-        testOption = types.option types.string;
+        testOption = types.optional types.string;
       in
       {
         testValidString = {
@@ -356,7 +356,7 @@ lib.fix (
 
         testInvalid = {
           expr = testOption.verify 3;
-          expected = "in option<string>: Expected type 'string' but value '3' failed the type check";
+          expected = "in optional<string>: Expected type 'string' but value '3' failed the type check";
         };
       };
 

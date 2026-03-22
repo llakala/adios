@@ -2,6 +2,9 @@ Any new features or breaking changes will be listed here.
 
 # 3/22/2026
 
+- `types.option` has been renamed to `types.optional`. The word option already has a meaning in an Adios context, so
+  preventing a naming collision is preferable.
+
 - The error message when a type fails to match has been improved. Previously, Adios would print type errors in this
   format:
   ```

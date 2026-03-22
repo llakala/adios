@@ -69,7 +69,7 @@ Declare a custom type using a bool function
 
 ## `types.typedef'`
 
-Declare a custom type using an option<string> function.
+Declare a custom type using an optional<string> function.
 
 `name`
 
@@ -142,9 +142,9 @@ Derivation
 
 Type
 
-## `types.option`
+## `types.optional`
 
-Option<t>
+optional<t>
 
 `t`
 
