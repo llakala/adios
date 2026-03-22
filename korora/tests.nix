@@ -273,7 +273,7 @@ lib.fix (
           expr = testAttrsOf.verify {
             x = 1;
           };
-          expected = "in attrsOf<string> value: Expected type 'string' but value '1' is of type 'int'";
+          expected = "in attrsOf<string> value: in attribute 'x': Expected type 'string' but value '1' is of type 'int'";
         };
 
         testInvalidType = {
@@ -392,7 +392,7 @@ lib.fix (
         };
 
         testNonTotal = {
-          expr = testStructNonTotal.verify {};
+          expr = testStructNonTotal.verify { };
           expected = null;
         };
 

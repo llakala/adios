@@ -55,27 +55,27 @@
 */
 let
   inherit (builtins)
-    typeOf
-    isString
-    isFunction
-    isAttrs
-    isList
     all
-    attrValues
-    isPath
-    head
-    split
-    concatStringsSep
     any
-    isInt
-    isFloat
-    isBool
     attrNames
+    concatMap
+    concatStringsSep
     elem
-    foldl'
     elemAt
-    length
+    foldl'
     genList
+    head
+    isAttrs
+    isBool
+    isFloat
+    isFunction
+    isInt
+    isList
+    isPath
+    isString
+    length
+    split
+    typeOf
     ;
 
   isDerivation = value: isAttrs value && (value.type or null == "derivation");
@@ -263,18 +263,32 @@ fix (self: {
     self.typedef' name (v: if !isList v then typeError name v else withErrorContext (all' verify v));
 
   /*
-    listOf<t>
+    attrsOf<t>
   */
   attrsOf =
     # Attribute value type
     t:
     let
-      name = "attrsOf<${t.name}>";
-      inherit (t) verify;
-      withErrorContext = addErrorContext "in ${name} value";
+      typename = "attrsOf<${t.name}>";
     in
-    self.typedef' name (
-      v: if !isAttrs v then typeError name v else withErrorContext (all' verify (attrValues v))
+    self.typedef' typename (
+      attrs:
+      if !isAttrs attrs then
+        typeError typename attrs
+      else
+        let
+          errors = concatMap (key: [
+            (addErrorContext "in ${typename} value: in attribute '${key}'" (t.verify attrs.${key}))
+          ]) (attrNames attrs);
+          # If an error was found, find the first error to return.
+          recurse =
+            i:
+            let
+              v = elemAt errors i;
+            in
+            if v != null then v else recurse (i + 1);
+        in
+        if all (err: err == null) errors then null else recurse 0
     );
 
   /*

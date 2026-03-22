@@ -162,7 +162,7 @@ listOf<t>
 
 ## `types.attrsOf`
 
-listOf<t>
+attrsOf<t>
 
 `t`
 
