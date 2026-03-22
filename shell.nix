@@ -7,7 +7,7 @@ let
   inherit (pkgs) lib;
   # generates docs for korora
   gendocs = pkgs.writeShellScriptBin "gendocs" ''
-    ${lib.getExe' pkgs.nixdoc "nixdoc"} --category types --description "Kororā" --file korora/default.nix | sed s/' {#.*'/""/ > korora/README.md
+    ${lib.getExe' pkgs.nixdoc "nixdoc"} --category types --prefix "" --description "Kororā" --file korora/default.nix | sed s/' {#.*'/""/ > korora/README.md
   '';
 in
 

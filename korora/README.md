@@ -53,7 +53,7 @@ For usage example see [tests.nix](./tests.nix).
 
 # Reference
 
-## `lib.types.typedef`
+## `types.typedef`
 
 Declare a custom type using a bool function
 
@@ -67,7 +67,7 @@ Declare a custom type using a bool function
 : Verification function returning a bool.
 
 
-## `lib.types.typedef'`
+## `types.typedef'`
 
 Declare a custom type using an option<string> function.
 
@@ -81,68 +81,68 @@ Declare a custom type using an option<string> function.
 : Verification function returning null on success & a string with error message on error.
 
 
-## `lib.types.string`
+## `types.string`
 
 String
 
-## `lib.types.any`
+## `types.any`
 
 Any
 
-## `lib.types.never`
+## `types.never`
 
 Never
 
-## `lib.types.int`
+## `types.int`
 
 Int
 
-## `lib.types.float`
+## `types.float`
 
 Single precision floating point
 
-## `lib.types.number`
+## `types.number`
 
 Either an int or a float
 
-## `lib.types.bool`
+## `types.bool`
 
 Bool
 
-## `lib.types.null`
+## `types.null`
 
 Null
 
-## `lib.types.attrs`
+## `types.attrs`
 
 Attribute with undefined attribute types
 
-## `lib.types.list`
+## `types.list`
 
 Attribute with undefined element types
 
-## `lib.types.function`
+## `types.function`
 
 Function
 
-## `lib.types.path`
+## `types.path`
 
 Path
 
-## `lib.types.pathLike`
+## `types.pathLike`
 
 Value that may not technically be a path, but has path-like properties
 Either an actual path `./foo`, a derivation, or a string
 
-## `lib.types.derivation`
+## `types.derivation`
 
 Derivation
 
-## `lib.types.type`
+## `types.type`
 
 Type
 
-## `lib.types.option`
+## `types.option`
 
 Option<t>
 
@@ -151,7 +151,7 @@ Option<t>
 : Null or t
 
 
-## `lib.types.listOf`
+## `types.listOf`
 
 listOf<t>
 
@@ -160,7 +160,7 @@ listOf<t>
 : Element type
 
 
-## `lib.types.attrsOf`
+## `types.attrsOf`
 
 listOf<t>
 
@@ -169,7 +169,7 @@ listOf<t>
 : Attribute value type
 
 
-## `lib.types.union`
+## `types.union`
 
 union<types...>
 
@@ -178,7 +178,7 @@ union<types...>
 : Any of <t>
 
 
-## `lib.types.intersection`
+## `types.intersection`
 
 intersection<types...>
 
@@ -187,7 +187,7 @@ intersection<types...>
 : All of <t>
 
 
-## `lib.types.rename`
+## `types.rename`
 
 rename<name, type>
 
@@ -214,7 +214,7 @@ myType = types.attrsOf (
 : Function argument
 
 
-## `lib.types.struct`
+## `types.struct`
 
 struct<name, members...>
 
@@ -291,7 +291,7 @@ Custom struct verification functions can be added as such:
 : Attribute set of type definitions.
 
 
-## `lib.types.optionalAttr`
+## `types.optionalAttr`
 
 optionalAttr<t>
 
@@ -300,7 +300,7 @@ optionalAttr<t>
 : Function argument
 
 
-## `lib.types.enum`
+## `types.enum`
 
 enum<name, elems...>
 
@@ -314,7 +314,7 @@ enum<name, elems...>
 : List of allowable enum members
 
 
-## `lib.types.tuple`
+## `types.tuple`
 
 tuple<elems...>
 
@@ -323,7 +323,7 @@ tuple<elems...>
 : List of tuple memeber types
 
 
-## `lib.types.defun`
+## `types.defun`
 
 Create a wrapped type checked function.
 
