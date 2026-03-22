@@ -75,7 +75,6 @@ let
     isString
     length
     split
-    typeOf
     ;
 
   isDerivation = value: isAttrs value && (value.type or null == "derivation");
@@ -86,7 +85,7 @@ let
 
   toPretty = (import ./lib.nix).toPretty { indent = "    "; };
 
-  typeError = name: v: "Expected type '${name}' but value '${toPretty v}' is of type '${typeOf v}'";
+  typeError = name: v: "Expected type '${name}' but value '${toPretty v}' failed the type check";
 
   # Builtin primitive checkers return a bool for indicating errors but we return option<string>
   wrapBoolVerify =

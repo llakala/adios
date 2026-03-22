@@ -2,6 +2,24 @@ Any new features or breaking changes will be listed here.
 
 # 3/22/2026
 
+- The error message when a type fails to match has been improved. Previously, Adios would print type errors in this
+  format:
+  ```
+  Expected type '${type.name}' but value '${value}' is of type '${typeOf value}'
+  ```
+  However, the result of `typeOf value` simply prints the primitive Nix type. This had several issues.
+  1. `typeOf` doesn't handle derivations properly, and just prints `set`.
+  2. It made errors for non-trivial types more confusing. For example, if a struct failed to match, Adios would print
+     `but value ${value} is of type 'set'`, but structs _are_ sets. Printing the primitive type isn't very useful in
+     most cases.
+
+  The error message format has been changed to:
+  ```
+  Expected type '${name}' but value '${toPretty v}' failed the type check
+  ```
+  This clarifies that Adios doesn't really know what type the input data was - it just knows the verification function
+  returned false. The primitive type is no longer printed, as it seems to do more harm than good in this context.
+
 - Adios typechecks modules, so `options = []` throws an error. Several of these type definitions have been refactored.
   This shouldn't cause a change in behavior, so please report if you experience any differences.
 

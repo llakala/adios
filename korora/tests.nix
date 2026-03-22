@@ -34,7 +34,7 @@ lib.fix (
     string = {
       testInvalid = {
         expr = types.string.verify 1;
-        expected = "Expected type 'string' but value '1' is of type 'int'";
+        expected = "Expected type 'string' but value '1' failed the type check";
       };
 
       testValid = {
@@ -76,7 +76,7 @@ lib.fix (
     function = {
       testInvalid = {
         expr = types.function.verify 1;
-        expected = "Expected type 'function' but value '1' is of type 'int'";
+        expected = "Expected type 'function' but value '1' failed the type check";
       };
 
       testValid = {
@@ -88,7 +88,7 @@ lib.fix (
     path = {
       testInvalid = {
         expr = types.path.verify 1;
-        expected = "Expected type 'path' but value '1' is of type 'int'";
+        expected = "Expected type 'path' but value '1' failed the type check";
       };
 
       testValid = {
@@ -100,7 +100,7 @@ lib.fix (
     pathLike = {
       testInvalid = {
         expr = types.pathLike.verify 1;
-        expected = "Expected type 'pathLike' but value '1' is of type 'int'";
+        expected = "Expected type 'pathLike' but value '1' failed the type check";
       };
 
       testPath = {
@@ -118,7 +118,7 @@ lib.fix (
     derivation = {
       testInvalid = {
         expr = types.derivation.verify { };
-        expected = "Expected type 'derivation' but value '{ }' is of type 'set'";
+        expected = "Expected type 'derivation' but value '{ }' failed the type check";
       };
 
       testValid = {
@@ -143,14 +143,14 @@ lib.fix (
     never = {
       testInvalid = {
         expr = types.never.verify 1234;
-        expected = "Expected type 'never' but value '1234' is of type 'int'";
+        expected = "Expected type 'never' but value '1234' failed the type check";
       };
     };
 
     int = {
       testInvalid = {
         expr = types.int.verify "x";
-        expected = "Expected type 'int' but value '\"x\"' is of type 'string'";
+        expected = "Expected type 'int' but value '\"x\"' failed the type check";
       };
 
       testValid = {
@@ -162,7 +162,7 @@ lib.fix (
     float = {
       testInvalid = {
         expr = types.float.verify "x";
-        expected = "Expected type 'float' but value '\"x\"' is of type 'string'";
+        expected = "Expected type 'float' but value '\"x\"' failed the type check";
       };
 
       testValid = {
@@ -174,7 +174,7 @@ lib.fix (
     number = {
       testInvalid = {
         expr = types.number.verify "x";
-        expected = "Expected type 'number' but value '\"x\"' is of type 'string'";
+        expected = "Expected type 'number' but value '\"x\"' failed the type check";
       };
 
       testValidInt = {
@@ -191,7 +191,7 @@ lib.fix (
     bool = {
       testInvalid = {
         expr = types.bool.verify "x";
-        expected = "Expected type 'bool' but value '\"x\"' is of type 'string'";
+        expected = "Expected type 'bool' but value '\"x\"' failed the type check";
       };
 
       testValid = {
@@ -203,7 +203,7 @@ lib.fix (
     null = {
       testInvalid = {
         expr = types.null.verify "x";
-        expected = "Expected type 'null' but value '\"x\"' is of type 'string'";
+        expected = "Expected type 'null' but value '\"x\"' failed the type check";
       };
 
       testValid = {
@@ -215,7 +215,7 @@ lib.fix (
     attrs = {
       testInvalid = {
         expr = types.attrs.verify "x";
-        expected = "Expected type 'attrs' but value '\"x\"' is of type 'string'";
+        expected = "Expected type 'attrs' but value '\"x\"' failed the type check";
       };
 
       testValid = {
@@ -227,7 +227,7 @@ lib.fix (
     list = {
       testInvalid = {
         expr = types.list.verify "x";
-        expected = "Expected type 'list' but value '\"x\"' is of type 'string'";
+        expected = "Expected type 'list' but value '\"x\"' failed the type check";
       };
 
       testValid = {
@@ -248,12 +248,12 @@ lib.fix (
 
         testInvalidElem = {
           expr = testListOf.verify [ 1 ];
-          expected = "in listOf<string> element: Expected type 'string' but value '1' is of type 'int'";
+          expected = "in listOf<string> element: Expected type 'string' but value '1' failed the type check";
         };
 
         testInvalidType = {
           expr = testListOf.verify 1;
-          expected = "Expected type 'listOf<string>' but value '1' is of type 'int'";
+          expected = "Expected type 'listOf<string>' but value '1' failed the type check";
         };
       };
 
@@ -273,12 +273,12 @@ lib.fix (
           expr = testAttrsOf.verify {
             x = 1;
           };
-          expected = "in attrsOf<string> value: in attribute 'x': Expected type 'string' but value '1' is of type 'int'";
+          expected = "in attrsOf<string> value: in attribute 'x': Expected type 'string' but value '1' failed the type check";
         };
 
         testInvalidType = {
           expr = testAttrsOf.verify 1;
-          expected = "Expected type 'attrsOf<string>' but value '1' is of type 'int'";
+          expected = "Expected type 'attrsOf<string>' but value '1' failed the type check";
         };
       };
 
@@ -294,7 +294,7 @@ lib.fix (
 
         testInvalid = {
           expr = testUnion.verify 1;
-          expected = "Expected type 'union<string>' but value '1' is of type 'int'";
+          expected = "Expected type 'union<string>' but value '1' failed the type check";
         };
       };
 
@@ -323,7 +323,7 @@ lib.fix (
 
         testInvalid = {
           expr = testIntersection.verify 1;
-          expected = "Expected type 'intersection<struct1,struct2>' but value '1' is of type 'int'";
+          expected = "Expected type 'intersection<struct1,struct2>' but value '1' failed the type check";
         };
       };
 
@@ -335,7 +335,7 @@ lib.fix (
 
       testInvalid = {
         expr = types.type.verify { };
-        expected = "Expected type 'type' but value '{ }' is of type 'set'";
+        expected = "Expected type 'type' but value '{ }' failed the type check";
       };
     };
 
@@ -356,7 +356,7 @@ lib.fix (
 
         testInvalid = {
           expr = testOption.verify 3;
-          expected = "in option<string>: Expected type 'string' but value '3' is of type 'int'";
+          expected = "in option<string>: Expected type 'string' but value '3' failed the type check";
         };
       };
 
@@ -422,14 +422,14 @@ lib.fix (
 
         testInvalidType = {
           expr = testStruct.verify "bar";
-          expected = "in struct 'testStruct': Expected type 'testStruct' but value '\"bar\"' is of type 'string'";
+          expected = "in struct 'testStruct': Expected type 'testStruct' but value '\"bar\"' failed the type check";
         };
 
         testInvalidMember = {
           expr = testStruct.verify {
             foo = 1;
           };
-          expected = "in struct 'testStruct': in member 'foo': Expected type 'string' but value '1' is of type 'int'";
+          expected = "in struct 'testStruct': in member 'foo': Expected type 'string' but value '1' failed the type check";
         };
       };
 
@@ -462,7 +462,7 @@ lib.fix (
             foo = "hello";
             optionalFoo = 1234;
           };
-          expected = "in struct 'testOptionalAttrStruct': in member 'optionalFoo': in optionalAttr<string>: Expected type 'string' but value '1234' is of type 'int'";
+          expected = "in struct 'testOptionalAttrStruct': in member 'optionalFoo': in optionalAttr<string>: Expected type 'string' but value '1234' failed the type check";
         };
       };
 
@@ -513,7 +513,7 @@ lib.fix (
       {
         testNotList = {
           expr = testTuple.verify "xyz";
-          expected = "Expected type 'tuple<string, int>' but value '\"xyz\"' is of type 'string'";
+          expected = "Expected type 'tuple<string, int>' but value '\"xyz\"' failed the type check";
         };
 
         testInvalidLength = {
@@ -526,7 +526,7 @@ lib.fix (
             123
             "xyz"
           ];
-          expected = "in tuple<string, int>: in element 0: Expected type 'string' but value '123' is of type 'int'";
+          expected = "in tuple<string, int>: in element 0: Expected type 'string' but value '123' failed the type check";
         };
 
         testInvalidTypeTail = {
@@ -534,7 +534,7 @@ lib.fix (
             "xyz"
             "123"
           ];
-          expected = "in tuple<string, int>: in element 1: Expected type 'int' but value '\"123\"' is of type 'string'";
+          expected = "in tuple<string, int>: in element 1: Expected type 'int' but value '\"123\"' failed the type check";
         };
 
         testValid = {
