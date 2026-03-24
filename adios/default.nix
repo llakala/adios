@@ -116,7 +116,7 @@ let
         else if option ? options then
           let
             value = computeOptions {
-              inherit args modulePath;
+              inherit args modulePath root;
               errorPrefix = errorPrefix';
               options = option.options;
               passedArgs = passedArgs.${name} or { };

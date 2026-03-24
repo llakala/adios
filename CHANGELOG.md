@@ -2,6 +2,8 @@ Any new features or breaking changes will be listed here.
 
 # 3/23/2026
 
+- Nested options under `options.foo.options.bar` should now work correctly with mutators.
+
 - When first typechecking a module, we now immediately store its path as an accessible attribute. This should improve a
   few niche error cases, so the module to blame is always reported.
 
