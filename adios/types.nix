@@ -38,6 +38,7 @@ let
         default = optionalAttr any;
         defaultFunc = optionalAttr function;
         example = optionalAttr any;
+        verify = optionalAttr function;
       }).override
         {
           verify =
@@ -54,9 +55,10 @@ let
       mutatorType = type;
       mergeFunc = function;
       description = optionalAttr string;
-      example = optionalAttr any;
       default = optionalAttr any;
       defaultFunc = optionalAttr function;
+      example = optionalAttr any;
+      verify = optionalAttr function;
     };
 
     subOptions = struct "subOptions" {

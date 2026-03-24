@@ -6,6 +6,7 @@ let
   # Helper functions for users, accessed through `adios.lib`
   lib = {
     importModules = import ./lib/importModules.nix { inherit adios; };
+    disjointWith = import ./lib/disjointWith.nix { inherit printList; };
     merge = {
       lists.concat = { mutators }: concatLists (attrValues mutators);
       strings.concatLines = { mutators }: concatStringsSep "\n" (attrValues mutators);
@@ -61,11 +62,20 @@ let
     );
 
   checkOption =
-    errorPrefix: option: value:
+    errorPrefix: args: option: value:
     let
       err = option.type.verify value;
+      verifyError = callFunction option.verify (args // { inherit value; });
     in
-    if err != null then throw "${errorPrefix}: type error: ${err}" else value;
+    if err != null then
+      throw "${errorPrefix}: type error: ${err}"
+    else if option ? verify && verifyError != true then
+      if verifyError == false then
+        throw "${errorPrefix}: option failed its 'verify' check"
+      else
+        throw "${errorPrefix}: ${verifyError}"
+    else
+      value;
 
   # Compute options from defaults & provided args
   computeOptions =
@@ -87,6 +97,7 @@ let
         let
           option = options.${name};
           errorPrefix' = "${errorPrefix}: in option '${name}'";
+          checkOption' = checkOption errorPrefix' args;
         in
         # Gross hack - if you want to always go through the mergeFunc,
         # set `mutators = []`.
@@ -95,7 +106,7 @@ let
           [
             {
               inherit name;
-              value = checkOption errorPrefix' option (
+              value = checkOption' option (
                 callFunction option.mergeFunc (
                   args
                   // {
@@ -131,7 +142,7 @@ let
           [
             {
               inherit name;
-              value = checkOption errorPrefix' option passedArgs.${name};
+              value = checkOption' option passedArgs.${name};
             }
           ]
         # Default value
@@ -139,7 +150,7 @@ let
           [
             {
               inherit name;
-              value = checkOption errorPrefix' option option.default;
+              value = checkOption' option option.default;
             }
           ]
         # Computed default value
@@ -148,7 +159,7 @@ let
             {
               # Compute value with args fixpoint
               inherit name;
-              value = checkOption errorPrefix' option (callFunction option.defaultFunc args);
+              value = checkOption' option (callFunction option.defaultFunc args);
             }
           ]
         else

@@ -1,5 +1,83 @@
 Any new features or breaking changes will be listed here.
 
+# 3/24/2026
+
+- Options can now provide a `verify` function. This function can be used to add an additional check on an option's value
+  after the typecheck passes:
+
+  ```nix
+  options = {
+    positiveInteger = {
+      type = types.int;
+      verify = { value }: value >= 0;
+    };
+  };
+  ```
+
+  Or to check whether some other options are set at the same time:
+
+  ```nix
+  options = {
+    firstName = {
+      type = types.string;
+      verify = { options }: options ? lastName;
+    };
+    lastName = {
+      type = types.string;
+      verify = { options }: options ? firstName;
+    };
+  }
+  ```
+
+  Or to verify that some other options are _not_ set.
+
+  ```nix
+  options = {
+    settings = {
+      type = types.attrs;
+      verify = { options }: !options ? configFile;
+    };
+    configFile = {
+      type = types.path;
+      verify = { options }: !options ? settings;
+    };
+  }
+  ```
+
+  The last type is used so often in `adios-wrappers` that a helper function is provided to achieve it.
+
+  ```nix
+  options = {
+    settings = {
+      type = types.attrs;
+      verify = adios.lib.disjointWith [ "configFile" ];
+    };
+    configFile = {
+      type = types.path;
+      verify = adios.lib.disjointWith [ "settings" ];
+    };
+  }
+  ```
+
+  The `verify` function is passed `{ options, inputs, value }` lazily, where value is what the value of the option
+  resolves to. Note that attempting to access the value of `options.foo` within `options.foo`'s verification function
+  will result in an infinite recursion error, so use `value` instead.
+
+  The `verify` function is expected to return true, false, or a string. Returning a string allows an option to provide a
+  custom error, rather than just printing `in option ${option}: option failed its 'verify' check`.
+
+  Note that verification functions are only performed if the value of the option is accessed. This is why two disjoint
+  options should both verify that the other isn't set, to prevent edge cases. Say options `foo` and `bar` were expected
+  to be disjoint, but only `foo` verifies that `bar` isn't set. If the impl ended up checking `bar` first:
+
+  ```nix
+  impl = { options }: if options ? bar then options.bar else options.foo;
+  ```
+
+  Then `foo` would never be evaluated, and the verification function would never trigger. This can be avoided by
+  consistently using the verified option first, but this is easy so miss, so verifying with both is recommended
+  practice.
+
 # 3/23/2026
 
 - Nested options under `options.foo.options.bar` should now work correctly with mutators.
