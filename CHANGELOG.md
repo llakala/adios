@@ -1,5 +1,10 @@
 Any new features or breaking changes will be listed here.
 
+# 3/23/2026
+
+- When first typechecking a module, we now immediately store its path as an accessible attribute. This should improve a
+  few niche error cases, so the module to blame is always reported.
+
 # 3/22/2026
 
 - `types.option` has been renamed to `types.optional`. The word option already has a meaning in an Adios context, so

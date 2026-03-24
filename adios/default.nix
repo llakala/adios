@@ -156,39 +156,43 @@ let
 
   # Type check a module lazily
   loadModule =
-    def:
     let
-      errorPrefix =
-        if def ? name then "in module ${types.string.check def.name def.name}" else "in module";
+      recurse =
+        path: def:
+        let
+          errorPrefix = "in module ${path}";
+        in
+        {
+          options = checkAttrsOfType "${errorPrefix} options definition" types.modules.option (
+            def.options or { }
+          );
+
+          modules = mapAttrs (name: recurse "${path}/${name}") (def.modules or { });
+
+          types = checkAttrsOfType "${errorPrefix}: while checking 'types'" types.modules.typedef (
+            def.types or { }
+          );
+
+          inputs = checkAttrsOfType "${errorPrefix}: while checking 'inputs'" types.modules.input (
+            def.inputs or { }
+          );
+
+          path = if path == "" then "/" else path;
+        }
+        // (optionalAttrs (def ? mutations) {
+          mutations =
+            checkAttrsOfType "${errorPrefix}: while checking 'mutations'" types.modules.mutation
+              def.mutations;
+        })
+        // (optionalAttrs (def ? impl) {
+          impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
+        })
+        // (optionalAttrs (def ? lib) {
+          lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib def.lib;
+        });
     in
     # The loaded module instance
-    {
-      options = checkAttrsOfType "${errorPrefix}: while checking 'options'" types.modules.option (
-        def.options or { }
-      );
-
-      modules = mapAttrs (_: loadModule) (def.modules or { });
-
-      types = checkAttrsOfType "${errorPrefix}: while checking 'types'" types.modules.typedef (
-        def.types or { }
-      );
-
-      inputs = checkAttrsOfType "${errorPrefix}: while checking 'inputs'" types.modules.input (
-        def.inputs or { }
-      );
-    }
-    // (optionalAttrs (def ? mutations) {
-      mutations =
-        checkAttrsOfType "${errorPrefix}: while checking 'mutations'" types.modules.mutation
-          def.mutations;
-    })
-    // (optionalAttrs (def ? impl) {
-      impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
-    })
-    // (optionalAttrs (def ? lib) {
-      lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib def.lib;
-    })
-    ;
+    recurse "";
 
   # Merge lhs & rhs recursing into suboptions
   mergeOptionsUnchecked =
@@ -241,11 +245,11 @@ let
           module: tok:
           if !module.modules ? ${tok} then
             throw ''
-              Module path `${tok}` is not a child module of `${module.name or "root"}`.
-              Valid children of `${module.name or "root"}`: [${concatStringsSep ", " (attrNames module.modules)}]
+              Module path `${tok}` is not a child module of `${module.path}`.
+              Valid children of `${module.path}`: [${concatStringsSep ", " (attrNames module.modules)}]
             ''
           else
-            module.modules.${tok} // { name = tok; }
+            module.modules.${tok}
         ) scope (tail tokens);
 
   getMutators =
@@ -438,13 +442,10 @@ let
     }:
     let
       recurse =
-        # Path to current module as a list of string
-        modulePath':
         # Current module
         module:
         let
-          # Create submodule path string
-          modulePath = "/" + concatStringsSep "/" modulePath';
+          modulePath = module.path;
 
           self =
             module
@@ -458,7 +459,7 @@ let
                   passedArgs = options;
                 });
               # Recurse into child modules
-              modules = mapAttrs (moduleName: recurse (modulePath' ++ [ moduleName ])) module.modules;
+              modules = mapAttrs (_: recurse) module.modules;
             }
             // optionalAttrs (module ? impl) {
               # Wrap module call with computed args
@@ -490,7 +491,7 @@ let
         in
         self;
 
-      tree' = recurse [ ] root;
+      tree' = recurse root;
     in
     tree';
 
