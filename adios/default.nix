@@ -274,9 +274,9 @@ let
           [
             {
               name = mutatorPath;
-              value = checkOption "${errorPrefix}: while checking type of mutator '${mutatorPath}'" {
-                type = option.mutatorType;
-              } (callFunction resolution.mutations.${modulePath}.${name} resolution.args);
+              value =
+                checkType "${errorPrefix}: while checking type of mutator '${mutatorPath}'" option.mutatorType
+                  (callFunction resolution.mutations.${modulePath}.${name} resolution.args);
             }
           ]
         else
@@ -287,9 +287,9 @@ let
       ++ optionals (passedArgs ? ${name}) [
         {
           name = modulePath;
-          value = checkOption "${errorPrefix}: while checking type of injected value" {
-            type = option.mutatorType;
-          } passedArgs.${name};
+          value =
+            checkType "${errorPrefix}: while checking type of injected value" option.mutatorType
+              passedArgs.${name};
         }
       ]
     );
