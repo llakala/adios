@@ -63,7 +63,7 @@ let
     let
       err = option.type.verify value;
     in
-    if err != null then (throw "${errorPrefix}: type error: ${err}") else value;
+    if err != null then throw "${errorPrefix}: type error: ${err}" else value;
 
   # Compute options from defaults & provided args
   computeOptions =
@@ -160,7 +160,7 @@ let
       recurse =
         path: def:
         let
-          errorPrefix = "in module ${path}";
+          errorPrefix = "in module '${path}'";
         in
         {
           options = checkAttrsOfType "${errorPrefix} options definition" types.modules.option (
@@ -274,7 +274,7 @@ let
           [
             {
               name = mutatorPath;
-              value = checkOption "${errorPrefix}: while checking type of mutator ${mutatorPath}" {
+              value = checkOption "${errorPrefix}: while checking type of mutator '${mutatorPath}'" {
                 type = option.mutatorType;
               } (callFunction resolution.mutations.${modulePath}.${name} resolution.args);
             }
@@ -348,7 +348,7 @@ let
             inherit modulePath;
             inherit (module) options;
             args = args.${modulePath};
-            errorPrefix = "while computing eval stage: while computing ${modulePath} args";
+            errorPrefix = "while computing eval stage: while computing '${modulePath}' args";
             passedArgs = options.${modulePath} or { };
           };
         }) resolution
@@ -409,7 +409,7 @@ let
                       options = computeOptions {
                         inherit args root;
                         inherit (inputModule) options;
-                        errorPrefix = "while computing ${module.path} args: while calling input ${module.path}";
+                        errorPrefix = "while computing '${module.path}' args: while calling input '${module.path}'";
                         modulePath = inputPath;
                         passedArgs = implOptions;
                       };
@@ -422,7 +422,7 @@ let
           inherit args root;
           modulePath = module.path;
           inherit (module) options;
-          errorPrefix = "while computing ${module.path} args";
+          errorPrefix = "while computing '${module.path}' args";
           passedArgs = passedArgs.${module.path} or { };
         });
       };
@@ -477,7 +477,7 @@ let
                           modulePath = module.path;
                           inherit (module) options;
                           root = tree';
-                          errorPrefix = "while calling ${module.path}";
+                          errorPrefix = "while calling '${module.path}'";
                           # Concat passed options with options passed to tree eval
                           passedArgs = mergeOptionsUnchecked self.options passedOptions implOptions;
                         });
