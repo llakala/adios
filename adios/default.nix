@@ -381,7 +381,6 @@ let
     {
       root,
       module,
-      modulePath,
       # Options to be injected
       passedArgs,
     }:
@@ -390,7 +389,7 @@ let
         inputs = mapAttrs (
           _: input:
           let
-            inputPath = absModulePath modulePath input.path;
+            inputPath = absModulePath module.path input.path;
             inputModule = fetchModule root inputPath;
           in
           inputModule.args.options
@@ -410,7 +409,7 @@ let
                       options = computeOptions {
                         inherit args root;
                         inherit (inputModule) options;
-                        errorPrefix = "while computing ${modulePath} args: while calling input ${inputPath}";
+                        errorPrefix = "while computing ${module.path} args: while calling input ${module.path}";
                         modulePath = inputPath;
                         passedArgs = implOptions;
                       };
@@ -420,10 +419,11 @@ let
           }
         ) module.inputs;
         options = inspectImpl module (computeOptions {
-          inherit args modulePath root;
+          inherit args root;
+          modulePath = module.path;
           inherit (module) options;
-          errorPrefix = "while computing ${modulePath} args";
-          passedArgs = passedArgs.${modulePath} or { };
+          errorPrefix = "while computing ${module.path} args";
+          passedArgs = passedArgs.${module.path} or { };
         });
       };
     in
@@ -445,17 +445,14 @@ let
         # Current module
         module:
         let
-          modulePath = module.path;
-
           self =
             module
             // {
               # Take args from resolved context if it's available there.
               args =
-                args.${modulePath} or (computeArgs {
+                args.${module.path} or (computeArgs {
                   module = self;
                   root = tree';
-                  inherit modulePath;
                   passedArgs = options;
                 });
               # Recurse into child modules
@@ -466,7 +463,7 @@ let
               __functor =
                 _: implOptions:
                 let
-                  passedOptions = options.${modulePath} or { };
+                  passedOptions = options.${module.path} or { };
                   args =
                     if implOptions == { } then
                       # Reuse existing args if impl isn't being passed anything new
@@ -476,10 +473,11 @@ let
                       {
                         inherit (self.args) inputs;
                         options = inspectImpl self (computeOptions {
-                          inherit args modulePath;
+                          inherit args;
+                          modulePath = module.path;
                           inherit (module) options;
                           root = tree';
-                          errorPrefix = "while calling ${modulePath}";
+                          errorPrefix = "while calling ${module.path}";
                           # Concat passed options with options passed to tree eval
                           passedArgs = mergeOptionsUnchecked self.options passedOptions implOptions;
                         });
