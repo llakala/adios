@@ -9,8 +9,10 @@ let
     merge = {
       lists.concat = { mutators }: concatLists (attrValues mutators);
       strings.concatLines = { mutators }: concatStringsSep "\n" (attrValues mutators);
-      attrs.flat = import ./lib/merge-attrs-flat.nix;
-      attrs.recursively = import ./lib/merge-attrs-recursively.nix;
+      attrs.flat = import ./lib/merge-attrs-flat.nix { inherit printList; };
+      attrs.recursively = import ./lib/merge-attrs-recursively.nix {
+        inherit (import ../korora/lib.nix) toPretty;
+      };
       general.withPrio = import ./lib/withPrio.nix;
     };
   };
@@ -246,7 +248,7 @@ let
           if !module.modules ? ${tok} then
             throw ''
               Module path `${tok}` is not a child module of `${module.path}`.
-              Valid children of `${module.path}`: [${concatStringsSep ", " (attrNames module.modules)}]
+              Valid children of `${module.path}`: ${printList (attrNames module.modules)}
             ''
           else
             module.modules.${tok}

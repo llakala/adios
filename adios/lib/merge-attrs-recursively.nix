@@ -1,3 +1,4 @@
+{ toPretty }:
 { mutators }:
 let
   inherit (builtins)
@@ -9,8 +10,6 @@ let
     attrValues
     ;
   isDerivation = value: (value.type or null) == "derivation";
-
-  inherit ((import ../../korora/lib.nix)) toPretty;
 
   f = zipAttrsWith (
     key: values:

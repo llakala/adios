@@ -1,9 +1,9 @@
+{ printList }:
 { mutators }:
 let
   inherit (builtins)
     attrNames
     attrValues
-    concatStringsSep
     foldl'
     head
     intersectAttrs
@@ -45,7 +45,7 @@ let
       ''
     else
       throw ''
-        Collision between mutators '${collisionData.name}' and '${name}' on keys [${concatStringsSep ", " collisionData.sharedKeys}].
+        Collision between mutators '${collisionData.name}' and '${name}' on keys ${printList collisionData.sharedKeys}.
       ''
   ) [ ] (attrNames mutators);
 in
