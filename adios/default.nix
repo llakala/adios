@@ -76,8 +76,8 @@ let
       errorPrefix,
       # Defined options
       options,
-      # Passed options
-      passedArgs,
+      # parameters given explicitly in eval/impl stage
+      params,
       modulePath,
       root ? null,
     }:
@@ -103,9 +103,9 @@ let
                       inherit
                         name
                         option
-                        passedArgs
                         root
                         modulePath
+                        params
                         ;
                       errorPrefix = errorPrefix';
                     };
@@ -121,17 +121,17 @@ let
               inherit args modulePath root;
               errorPrefix = errorPrefix';
               options = option.options;
-              passedArgs = passedArgs.${name} or { };
+              params = params.${name} or { };
             };
           in
           # Only return a value if suboptions actually returned anything
           if value != { } then [ { inherit name value; } ] else [ ]
         # Explicitly passed value
-        else if passedArgs ? ${name} then
+        else if params ? ${name} then
           [
             {
               inherit name;
-              value = checkOption errorPrefix' option passedArgs.${name};
+              value = checkOption errorPrefix' option params.${name};
             }
           ]
         # Default value
@@ -258,7 +258,7 @@ let
     {
       name,
       option,
-      passedArgs,
+      params,
       root,
       modulePath,
       errorPrefix,
@@ -284,14 +284,14 @@ let
         else
           [ ]
       ) option.mutators
-      # If the mutators list is nonempty, have the value passed in eval stage
-      # option go through the mergeFunc, under the current module's name.
-      ++ optionals (passedArgs ? ${name}) [
+      # If the mutators list is nonempty, have the value passed in eval/impl
+      # stage go through the mergeFunc, under the current module's name.
+      ++ optionals (params ? ${name}) [
         {
           name = modulePath;
           value =
             checkType "${errorPrefix}: while checking type of injected value" option.mutatorType
-              passedArgs.${name};
+              params.${name};
         }
       ]
     );
@@ -333,8 +333,8 @@ let
 
   evalModuleTree =
     {
-      # Passed options
-      options,
+      # Directly passed values in the eval stage for certain options
+      evalParams,
       # Resolved modules attrset
       resolution,
       # Previous eval memoisation
@@ -351,7 +351,7 @@ let
             inherit (module) options;
             args = args.${modulePath};
             errorPrefix = "while computing eval stage: while computing '${modulePath}' args";
-            passedArgs = options.${modulePath} or { };
+            params = evalParams.${modulePath} or { };
           };
         }) resolution
         // memoArgs;
@@ -381,10 +381,11 @@ let
 
   computeArgs =
     {
-      root,
       module,
-      # Options to be injected
-      passedArgs,
+      # module to fetch other modules relative to
+      root,
+      # Directly passed values for certain options in the eval stage
+      evalParams,
     }:
     let
       args = {
@@ -397,11 +398,11 @@ let
           inputModule.args.options
           // optionalAttrs (inputModule ? impl) {
             __functor =
-              _: implOptions:
+              _: implParams:
               let
                 args =
                   # Reuse existing args if impl isn't being passed anything new
-                  if implOptions == { } then
+                  if implParams == { } then
                     inputModule.args
                   else
                     # If any new args are passed, recompute the options, so any
@@ -413,7 +414,7 @@ let
                         inherit (inputModule) options;
                         errorPrefix = "while computing '${module.path}' args: while calling input '${module.path}'";
                         modulePath = inputPath;
-                        passedArgs = implOptions;
+                        params = implParams;
                       };
                     };
               in
@@ -425,7 +426,7 @@ let
           modulePath = module.path;
           inherit (module) options;
           errorPrefix = "while computing '${module.path}' args";
-          passedArgs = passedArgs.${module.path} or { };
+          params = evalParams.${module.path} or { };
         });
       };
     in
@@ -437,10 +438,11 @@ let
     {
       # Root module
       root,
-      # Passed options
-      options,
-      # Attrset of computed args from tree eval context
-      args,
+      # Directly passed values for certain options in the eval stage
+      evalParams,
+      # args computed using the evalParams for all the modules in the eval
+      # closure
+      evalArgs,
     }:
     let
       recurse =
@@ -452,10 +454,10 @@ let
             // {
               # Take args from resolved context if it's available there.
               args =
-                args.${module.path} or (computeArgs {
+                evalArgs.${module.path} or (computeArgs {
                   module = self;
-                  root = tree';
-                  passedArgs = options;
+                  root = tree;
+                  inherit evalParams;
                 });
               # Recurse into child modules
               modules = mapAttrs (_: recurse) module.modules;
@@ -463,25 +465,25 @@ let
             // optionalAttrs (module ? impl) {
               # Wrap module call with computed args
               __functor =
-                _: implOptions:
+                _: implParams:
                 let
-                  passedOptions = options.${module.path} or { };
+                  evalParams' = evalParams.${module.path} or { };
                   args =
-                    if implOptions == { } then
+                    if implParams == { } then
                       # Reuse existing args if impl isn't being passed anything new
                       self.args
                     else
-                      # Re-compute args fixpoint with passed args
+                      # Re-compute args fixpoint with passed params
                       {
                         inherit (self.args) inputs;
                         options = inspectImpl self (computeOptions {
                           inherit args;
                           modulePath = module.path;
                           inherit (module) options;
-                          root = tree';
+                          root = tree;
                           errorPrefix = "while calling '${module.path}'";
-                          # Concat passed options with options passed to tree eval
-                          passedArgs = mergeOptionsUnchecked self.options passedOptions implOptions;
+                          # Concat passed params with params passed to tree eval
+                          params = mergeOptionsUnchecked self.options evalParams' implParams;
                         });
                       };
                 in
@@ -491,9 +493,9 @@ let
         in
         self;
 
-      tree' = recurse root;
+      tree = recurse root;
     in
-    tree';
+    tree;
 
   # Load a module tree recursively from root module
   loadTree =
@@ -506,12 +508,16 @@ let
     }:
     let
       resolution = resolveTree root (attrNames options);
-      evalParams = evalModuleTree { inherit resolution options; };
+      evalData = evalModuleTree {
+        inherit resolution;
+        evalParams = options;
+      };
     in
     # Tree context
     applyTreeOptions {
-      inherit root options;
-      inherit (evalParams) args;
+      inherit root;
+      evalParams = options;
+      evalArgs = evalData.args;
     };
 
   adios =
