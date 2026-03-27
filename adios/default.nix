@@ -70,6 +70,9 @@ let
   computeOptions =
     # top module to fetch relative to (for mutators)
     root:
+    let
+      computeTreeMutators = computeMutators root;
+    in
     # Defined options
     options:
     # Path from root of the current module
@@ -98,7 +101,7 @@ let
                 callFunction option.mergeFunc (
                   args
                   // {
-                    mutators = computeMutators root modulePath errorPrefix' name option params;
+                    mutators = computeTreeMutators modulePath errorPrefix' name option params;
                   }
                 )
               );
