@@ -1,15 +1,17 @@
-{ printList }:
 { mutators }:
 let
   inherit (builtins)
     attrNames
     attrValues
+    concatStringsSep
     foldl'
     head
     intersectAttrs
     length
     zipAttrsWith
     ;
+
+  printList = list: "[${concatStringsSep ", " list}]";
 
   checkPreviousMutators =
     prevNames: name:
