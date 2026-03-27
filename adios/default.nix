@@ -68,18 +68,18 @@ let
 
   # Compute options from defaults & provided args
   computeOptions =
-    {
-      # Computed args fixpoint
-      args,
-      # Error prefix string
-      errorPrefix,
-      # Defined options
-      options,
-      # parameters given explicitly in eval/impl stage
-      params,
-      modulePath,
-      root ? null,
-    }:
+    # top module to fetch relative to (for mutators)
+    root:
+    # Defined options
+    options:
+    # Path from root of the current module
+    modulePath:
+    # Computed args fixpoint
+    args:
+    # Error prefix string
+    errorPrefix:
+    # parameters given explicitly in eval/impl stage
+    params:
     listToAttrs (
       concatMap (
         name:
@@ -116,12 +116,7 @@ let
         # Compute nested options
         else if option ? options then
           let
-            value = computeOptions {
-              inherit args modulePath root;
-              errorPrefix = errorPrefix';
-              options = option.options;
-              params = params.${name} or { };
-            };
+            value = computeOptions root option.options modulePath args errorPrefix' (params.${name} or { });
           in
           # Only return a value if suboptions actually returned anything
           if value != { } then [ { inherit name value; } ] else [ ]
@@ -310,10 +305,13 @@ let
       evalParams,
     }:
     let
+      tree = recurse root;
+      computeTreeOptions = computeOptions tree;
       recurse =
         # Current module
         module:
         let
+          computeModuleOptions = computeTreeOptions module.options module.path;
           self =
             module
             // rec {
@@ -326,14 +324,9 @@ let
                   in
                   inputModule.args.options
                 ) module.inputs;
-                options = inspectImpl self (computeOptions {
-                  inherit args;
-                  root = tree;
-                  modulePath = module.path;
-                  inherit (module) options;
-                  errorPrefix = "while computing '${module.path}' args";
-                  params = evalParams.${module.path} or { };
-                });
+                options = inspectImpl self (
+                  computeModuleOptions args "while computing '${module.path}' args" (evalParams.${module.path} or { })
+                );
               };
               # Recurse into child modules
               modules = mapAttrs (_: recurse) module.modules;
@@ -351,19 +344,14 @@ let
                       # Re-compute args fixpoint with passed params
                       {
                         inherit (self.args) inputs;
-                        options = inspectImpl self (computeOptions {
-                          inherit args;
-                          modulePath = module.path;
-                          inherit (module) options;
-                          root = tree;
-                          errorPrefix = "while calling '${module.path}'";
-                          # Concat passed params with params passed to tree eval
-                          params =
+                        options = inspectImpl self (
+                          computeModuleOptions args "while calling '${module.path}'" (
                             if evalParams ? ${module.path} then
                               mergeOptionsUnchecked self.options evalParams.${module.path} implParams
                             else
-                              implParams;
-                        });
+                              implParams
+                          )
+                        );
                       };
                 in
                 # Call implementation
@@ -371,8 +359,6 @@ let
             };
         in
         self;
-
-      tree = recurse root;
     in
     tree;
 
