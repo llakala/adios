@@ -150,45 +150,47 @@ let
       ) (attrNames options)
     );
 
-  # Type check a module lazily
-  loadModule =
-    let
-      recurse =
-        path: def:
+  getMutators =
+    {
+      name,
+      option,
+      params,
+      root,
+      modulePath,
+      errorPrefix,
+    }:
+    listToAttrs (
+      concatMap (
+        mutatorPath':
         let
-          errorPrefix = "in module '${path}'";
+          mutatorPath = absModulePath modulePath mutatorPath';
+          resolution = fetchModule root mutatorPath;
         in
+        # TODO: decide whether to error here, if a module didn't
+        # mutate when it was supposed to
+        if resolution.mutations ? ${modulePath}.${name} then
+          [
+            {
+              name = mutatorPath;
+              value =
+                checkType "${errorPrefix}: while checking type of mutator '${mutatorPath}'" option.mutatorType
+                  (callFunction resolution.mutations.${modulePath}.${name} resolution.args);
+            }
+          ]
+        else
+          [ ]
+      ) option.mutators
+      # If the mutators list is nonempty, have the value passed in eval/impl
+      # stage go through the mergeFunc, under the current module's name.
+      ++ optionals (params ? ${name}) [
         {
-          options = checkAttrsOfType "${errorPrefix} options definition" types.modules.option (
-            def.options or { }
-          );
-
-          modules = mapAttrs (name: recurse "${path}/${name}") (def.modules or { });
-
-          types = checkAttrsOfType "${errorPrefix}: while checking 'types'" types.modules.typedef (
-            def.types or { }
-          );
-
-          inputs = checkAttrsOfType "${errorPrefix}: while checking 'inputs'" types.modules.input (
-            def.inputs or { }
-          );
-
-          path = if path == "" then "/" else path;
+          name = modulePath;
+          value =
+            checkType "${errorPrefix}: while checking type of injected value" option.mutatorType
+              params.${name};
         }
-        // (optionalAttrs (def ? mutations) {
-          mutations =
-            checkAttrsOfType "${errorPrefix}: while checking 'mutations'" types.modules.mutation
-              def.mutations;
-        })
-        // (optionalAttrs (def ? impl) {
-          impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
-        })
-        // (optionalAttrs (def ? lib) {
-          lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib def.lib;
-        });
-    in
-    # The loaded module instance
-    recurse "";
+      ]
+    );
 
   # Merge lhs & rhs recursing into suboptions
   mergeOptionsUnchecked =
@@ -248,144 +250,95 @@ let
             module.modules.${tok}
         ) scope (tail tokens);
 
-  getMutators =
-    {
-      name,
-      option,
-      params,
-      root,
-      modulePath,
-      errorPrefix,
-    }:
-    listToAttrs (
-      concatMap (
-        mutatorPath':
-        let
-          mutatorPath = absModulePath modulePath mutatorPath';
-          resolution = fetchModule root mutatorPath;
-        in
-        # TODO: decide whether to error here, if a module didn't
-        # mutate when it was supposed to
-        if resolution.mutations ? ${modulePath}.${name} then
-          [
-            {
-              name = mutatorPath;
-              value =
-                checkType "${errorPrefix}: while checking type of mutator '${mutatorPath}'" option.mutatorType
-                  (callFunction resolution.mutations.${modulePath}.${name} resolution.args);
-            }
-          ]
-        else
-          [ ]
-      ) option.mutators
-      # If the mutators list is nonempty, have the value passed in eval/impl
-      # stage go through the mergeFunc, under the current module's name.
-      ++ optionals (params ? ${name}) [
-        {
-          name = modulePath;
-          value =
-            checkType "${errorPrefix}: while checking type of injected value" option.mutatorType
-              params.${name};
-        }
-      ]
-    );
-
   # When inspecting the args passed to a module within an `impl` or
   # `defaultFunc`, include the functor to call the module's impl directly.
   inspectImpl =
     module: oldArgs: if module ? __functor then oldArgs // { inherit (module) __functor; } else oldArgs;
 
-  # Apply options to a module tree, returning a new module tree where modules can be called
+  # Typecheck a module tree recursively from the root module,
+  # A new module tree is returned, where modules can be called
   # with their inputs already wired up & options partially applied.
-  applyTreeOptions =
-    {
-      # Root module
-      root,
-      # Directly passed values for certain options in the eval stage
-      evalParams,
-    }:
+  loadTree =
+    # Directly passed values for options in the eval stage
+    evalParams: rootDef:
     let
-      tree = recurse root;
+      tree = recurse "" rootDef;
       computeTreeOptions = computeOptions tree;
       recurse =
-        # Current module
-        module:
+        path: def:
         let
-          computeModuleOptions = computeTreeOptions module.options module.path;
-          self =
-            module
-            // rec {
-              args = {
-                inputs = mapAttrs (
-                  _: input:
-                  let
-                    inputPath = absModulePath module.path input.path;
-                    inputModule = fetchModule tree inputPath;
-                  in
-                  inputModule.args.options
-                ) module.inputs;
-                options = inspectImpl self (
-                  computeModuleOptions args "while computing '${module.path}' args" (evalParams.${module.path} or { })
-                );
-              };
-              # Recurse into child modules
-              modules = mapAttrs (_: recurse) module.modules;
-            }
-            // optionalAttrs (module ? impl) {
-              # Wrap module call with computed args
-              __functor =
-                _: implParams:
-                let
-                  args =
-                    if implParams == { } then
-                      # Reuse existing args if impl isn't being passed anything new
-                      self.args
-                    else
-                      # Re-compute args fixpoint with passed params
-                      {
-                        inherit (self.args) inputs;
-                        options = inspectImpl self (
-                          computeModuleOptions args "while calling '${module.path}'" (
-                            if evalParams ? ${module.path} then
-                              mergeOptionsUnchecked self.options evalParams.${module.path} implParams
-                            else
-                              implParams
-                          )
-                        );
-                      };
-                in
-                # Call implementation
-                callFunction self.impl args;
+          errorPrefix = "in module '${path}'";
+          computeModuleOptions = computeTreeOptions self.options self.path;
+          self = {
+            path = if path == "" then "/" else path;
+            options = checkAttrsOfType "${errorPrefix}: while checking 'options'" types.modules.option (
+              def.options or { }
+            );
+            inputs = checkAttrsOfType "${errorPrefix}: while checking 'inputs'" types.modules.input (
+              def.inputs or { }
+            );
+            mutations = checkAttrsOfType "${errorPrefix}: while checking 'mutations'" types.modules.mutation (
+              def.mutations or { }
+            );
+            modules = mapAttrs (name: recurse "${path}/${name}") (def.modules or { });
+            args = {
+              inputs = mapAttrs (
+                _: input: (fetchModule tree (absModulePath self.path input.path)).args.options
+              ) self.inputs;
+              options = inspectImpl self (
+                computeModuleOptions self.args "while computing '${self.path}' args" (
+                  evalParams.${self.path} or { }
+                )
+              );
             };
+          }
+          // optionalAttrs (def ? lib) {
+            lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib def.lib;
+          }
+          // optionalAttrs (def ? types) {
+            types = checkAttrsOfType "${errorPrefix}: while checking 'types'" types.modules.typedef def.types;
+          }
+          // (optionalAttrs (def ? impl) {
+            impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
+            __functor =
+              _: implParams:
+              let
+                args =
+                  if implParams == { } then
+                    # Reuse existing args if impl isn't being passed anything new
+                    self.args
+                  else
+                    # Recompute args fixpoint with passed params
+                    {
+                      inherit (self.args) inputs;
+                      options = inspectImpl self (
+                        computeModuleOptions args "while calling '${self.path}'" (
+                          if evalParams ? ${self.path} then
+                            mergeOptionsUnchecked self.options evalParams.${self.path} implParams
+                          else
+                            implParams
+                        )
+                      );
+                    };
+              in
+              # Call implementation
+              callFunction self.impl args;
+          });
         in
         self;
     in
+    # The loaded module instance
     tree;
 
-  # Load a module tree recursively from root module
-  loadTree =
-    unloadedRoot:
-    let
-      root = loadModule unloadedRoot;
-    in
-    {
-      options ? { },
-    }:
-    # Tree context
-    applyTreeOptions {
-      inherit root;
-      evalParams = options;
-    };
-
-  adios =
-    (loadModule {
-      inherit types lib;
-    })
-    // {
-      # Overwrite default functor with one that _does not_ do type checking.
-      # `load` does it's own type checking.
-      __functor = _: loadTree;
-    };
+  adios = {
+    inherit types lib;
+    __functor =
+      _: rootDef:
+      {
+        options ? { },
+      }:
+      loadTree options rootDef;
+  };
 
 in
 adios
