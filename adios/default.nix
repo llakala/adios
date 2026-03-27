@@ -26,7 +26,6 @@ let
     filter
     foldl'
     functionArgs
-    genericClosure
     head
     intersectAttrs
     isString
@@ -296,29 +295,6 @@ let
       ]
     );
 
-  # Resolve required module dependencies for defined config options
-  resolveTree =
-    scope: moduleNames:
-    listToAttrs (
-      map
-        (x: {
-          name = x.key;
-          value = fetchModule scope x.key;
-        })
-        (genericClosure {
-          # Get startSet from passed config
-          startSet = map (key: {
-            inherit key;
-          }) moduleNames;
-          # Discover module dependencies
-          operator =
-            { key }:
-            map (input: {
-              key = absModulePath key input.path;
-            }) (attrValues (fetchModule scope key).inputs);
-        })
-    );
-
   # When inspecting the args passed to a module within an `impl` or
   # `defaultFunc`, include the functor to call the module's impl directly.
   inspectImpl =
@@ -330,54 +306,6 @@ let
       }
     else
       oldArgs;
-
-  evalModuleTree =
-    {
-      # Directly passed values in the eval stage for certain options
-      evalParams,
-      # Resolved modules attrset
-      resolution,
-      # Previous eval memoisation
-      memoArgs ? { },
-      memoResults ? { },
-    }:
-    rec {
-      # Computed options/inputs for each module in resolution
-      args =
-        mapAttrs (modulePath: module: {
-          inputs = mapAttrs (_: input: args.${input.path}.options) module.inputs;
-          options = computeOptions {
-            inherit modulePath;
-            inherit (module) options;
-            args = args.${modulePath};
-            errorPrefix = "while computing eval stage: while computing '${modulePath}' args";
-            params = evalParams.${modulePath} or { };
-          };
-        }) resolution
-        // memoArgs;
-
-      # Module call results for each callable module in resolution
-      # TODO: actually use this
-      results =
-        listToAttrs (
-          concatMap (
-            modulePath:
-            let
-              module = resolution.${modulePath};
-            in
-            if module ? impl then
-              [
-                {
-                  name = modulePath;
-                  value = callFunction module.impl args.${modulePath};
-                }
-              ]
-            else
-              [ ]
-          ) (attrNames resolution)
-        )
-        // memoResults;
-    };
 
   computeArgs =
     {
@@ -440,9 +368,6 @@ let
       root,
       # Directly passed values for certain options in the eval stage
       evalParams,
-      # args computed using the evalParams for all the modules in the eval
-      # closure
-      evalArgs,
     }:
     let
       recurse =
@@ -452,13 +377,11 @@ let
           self =
             module
             // {
-              # Take args from resolved context if it's available there.
-              args =
-                evalArgs.${module.path} or (computeArgs {
-                  module = self;
-                  root = tree;
-                  inherit evalParams;
-                });
+              args = computeArgs {
+                module = self;
+                root = tree;
+                inherit evalParams;
+              };
               # Recurse into child modules
               modules = mapAttrs (_: recurse) module.modules;
             }
@@ -506,18 +429,10 @@ let
     {
       options ? { },
     }:
-    let
-      resolution = resolveTree root (attrNames options);
-      evalData = evalModuleTree {
-        inherit resolution;
-        evalParams = options;
-      };
-    in
     # Tree context
     applyTreeOptions {
       inherit root;
       evalParams = options;
-      evalArgs = evalData.args;
     };
 
   adios =

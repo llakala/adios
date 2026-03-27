@@ -1,5 +1,25 @@
 Any new features or breaking changes will be listed here.
 
+# 3/26/2026
+
+- The eval stage is now removed on a technical level.
+
+  Previously, Adios had a lot of infrastructure that created a closure for all the modules needed in the eval stage.
+  This was meant to provide fast lookups for these results that could be used across the tree. However, this came with a
+  lot of complexity that leads to niche issues.
+
+  While trying to fix a bug related to the eval stage not handing `impl`s properly, I tried stripping out the eval stage
+  logic. Without it, evaluation speed actually improved. It may be possible that the eval stage improves performance in
+  some contrived cases. But generally, the closure idea doesn't really make sense when we're already lazily looking up
+  args.
+
+  Do note that the eval stage means something different on a technical and user/facing level. Calling `adios root {
+  options."/nixpkgs".pkgs = pkgs; }` still works. The only thing that's removed is the internal logic, where
+  args were previously queried from the eval closure before computing them normally.
+
+  This shouldn't affect anything on the user side - although I expect it to fix a few niche bugs. If you experience any
+  regressions, please make a bug report.
+
 # 3/23/2026
 
 - Nested options under `options.foo.options.bar` should now work correctly with mutators.
