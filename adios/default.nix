@@ -98,16 +98,7 @@ let
                 callFunction option.mergeFunc (
                   args
                   // {
-                    mutators = getMutators {
-                      inherit
-                        name
-                        option
-                        root
-                        modulePath
-                        params
-                        ;
-                      errorPrefix = errorPrefix';
-                    };
+                    mutators = computeMutators root modulePath errorPrefix' name option params;
                   }
                 )
               );
@@ -150,15 +141,8 @@ let
       ) (attrNames options)
     );
 
-  getMutators =
-    {
-      name,
-      option,
-      params,
-      root,
-      modulePath,
-      errorPrefix,
-    }:
+  computeMutators =
+    root: modulePath: errorPrefix: name: option: params:
     listToAttrs (
       concatMap (
         mutatorPath':
