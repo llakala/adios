@@ -250,11 +250,6 @@ let
             module.modules.${tok}
         ) scope (tail tokens);
 
-  # When inspecting the args passed to a module within an `impl` or
-  # `defaultFunc`, include the functor to call the module's impl directly.
-  inspectImpl =
-    module: oldArgs: if module ? __functor then oldArgs // { inherit (module) __functor; } else oldArgs;
-
   # Typecheck a module tree recursively from the root module,
   # A new module tree is returned, where modules can be called
   # with their inputs already wired up & options partially applied.
@@ -285,11 +280,13 @@ let
               inputs = mapAttrs (
                 _: input: (fetchModule tree (absModulePath self.path input.path)).args.options
               ) self.inputs;
-              options = inspectImpl self (
+              options =
                 computeModuleOptions self.args "while computing '${self.path}' args" (
                   evalParams.${self.path} or { }
                 )
-              );
+                # If the current module has an impl, include it in the computed args,
+                # so the module can be called inside the tree
+                // (if def ? impl then { inherit (self) __functor; } else { });
             };
           }
           // optionalAttrs (def ? lib) {
@@ -311,14 +308,18 @@ let
                     # Recompute args fixpoint with passed params
                     {
                       inherit (self.args) inputs;
-                      options = inspectImpl self (
+                      options =
                         computeModuleOptions args "while calling '${self.path}'" (
                           if evalParams ? ${self.path} then
                             mergeOptionsUnchecked self.options evalParams.${self.path} implParams
                           else
                             implParams
                         )
-                      );
+                        # Current module necessarily defines a functor - include
+                        # it in the computed args
+                        // {
+                          inherit (self) __functor;
+                        };
                     };
               in
               # Call implementation
