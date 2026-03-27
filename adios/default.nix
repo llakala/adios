@@ -298,67 +298,7 @@ let
   # When inspecting the args passed to a module within an `impl` or
   # `defaultFunc`, include the functor to call the module's impl directly.
   inspectImpl =
-    module: oldArgs:
-    if module ? impl then
-      oldArgs
-      // {
-        __functor = _: newArgs: module newArgs;
-      }
-    else
-      oldArgs;
-
-  computeArgs =
-    {
-      module,
-      # module to fetch other modules relative to
-      root,
-      # Directly passed values for certain options in the eval stage
-      evalParams,
-    }:
-    let
-      args = {
-        inputs = mapAttrs (
-          _: input:
-          let
-            inputPath = absModulePath module.path input.path;
-            inputModule = fetchModule root inputPath;
-          in
-          inputModule.args.options
-          // optionalAttrs (inputModule ? impl) {
-            __functor =
-              _: implParams:
-              let
-                args =
-                  # Reuse existing args if impl isn't being passed anything new
-                  if implParams == { } then
-                    inputModule.args
-                  else
-                    # If any new args are passed, recompute the options, so any
-                    # defaultFuncs are updated
-                    {
-                      inherit (inputModule.args) inputs;
-                      options = computeOptions {
-                        inherit args root;
-                        inherit (inputModule) options;
-                        errorPrefix = "while computing '${module.path}' args: while calling input '${module.path}'";
-                        modulePath = inputPath;
-                        params = implParams;
-                      };
-                    };
-              in
-              callFunction inputModule.impl args;
-          }
-        ) module.inputs;
-        options = inspectImpl module (computeOptions {
-          inherit args root;
-          modulePath = module.path;
-          inherit (module) options;
-          errorPrefix = "while computing '${module.path}' args";
-          params = evalParams.${module.path} or { };
-        });
-      };
-    in
-    args;
+    module: oldArgs: if module ? __functor then oldArgs // { inherit (module) __functor; } else oldArgs;
 
   # Apply options to a module tree, returning a new module tree where modules can be called
   # with their inputs already wired up & options partially applied.
@@ -376,11 +316,24 @@ let
         let
           self =
             module
-            // {
-              args = computeArgs {
-                module = self;
-                root = tree;
-                inherit evalParams;
+            // rec {
+              args = {
+                inputs = mapAttrs (
+                  _: input:
+                  let
+                    inputPath = absModulePath module.path input.path;
+                    inputModule = fetchModule tree inputPath;
+                  in
+                  inputModule.args.options
+                ) module.inputs;
+                options = inspectImpl self (computeOptions {
+                  inherit args;
+                  root = tree;
+                  modulePath = module.path;
+                  inherit (module) options;
+                  errorPrefix = "while computing '${module.path}' args";
+                  params = evalParams.${module.path} or { };
+                });
               };
               # Recurse into child modules
               modules = mapAttrs (_: recurse) module.modules;
