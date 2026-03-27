@@ -390,7 +390,6 @@ let
               __functor =
                 _: implParams:
                 let
-                  evalParams' = evalParams.${module.path} or { };
                   args =
                     if implParams == { } then
                       # Reuse existing args if impl isn't being passed anything new
@@ -406,7 +405,11 @@ let
                           root = tree;
                           errorPrefix = "while calling '${module.path}'";
                           # Concat passed params with params passed to tree eval
-                          params = mergeOptionsUnchecked self.options evalParams' implParams;
+                          params =
+                            if evalParams ? ${module.path} then
+                              mergeOptionsUnchecked self.options evalParams.${module.path} implParams
+                            else
+                              implParams;
                         });
                       };
                 in
