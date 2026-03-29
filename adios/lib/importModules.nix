@@ -12,22 +12,20 @@ let
     ;
 
   matchNixFile = match "(.+)\.nix$";
-  moduleArgs = adios;
 in
 rootPath:
 let
   files = readDir rootPath;
-  filenames = attrNames (readDir rootPath);
 in
 listToAttrs (
   concatMap (
     name:
     if files.${name} == "directory" then
-      if pathExists "${toString rootPath}/${name}/default.nix" then
+      if pathExists (rootPath + "/${name}") then
         [
           {
             inherit name;
-            value = import "${toString rootPath}/${name}/default.nix" moduleArgs;
+            value = import (rootPath + "/${name}") adios;
           }
         ]
       else
@@ -37,9 +35,7 @@ listToAttrs (
         m = matchNixFile name;
         moduleName = head m;
       in
-      if m == null || name == "default.nix" then
-        [ ]
-      else
+      if m != null && name != "default.nix" then
         [
           {
             name =
@@ -53,8 +49,10 @@ listToAttrs (
                 ''
               else
                 moduleName;
-            value = import "${toString rootPath}/${name}" moduleArgs;
+            value = import (rootPath + "/${name}") adios;
           }
         ]
-  ) filenames
+      else
+        [ ]
+  ) (attrNames files)
 )
