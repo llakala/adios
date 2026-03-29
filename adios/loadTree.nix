@@ -187,7 +187,7 @@ let
 
   # Return absolute module path relative to pwd
   absModulePath =
-    pwd: path: toString (if substring 0 1 path == "/" then /. + path else /. + pwd + "/${path}");
+    pwd: path: if substring 0 1 path == "/" then path else toString (/. + pwd + "/${path}");
 
   # Get a module by it's / delimited path from the tree root
   fetchModule =
