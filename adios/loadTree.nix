@@ -260,14 +260,15 @@ let
         impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
         __functor =
           _: implParams:
-          let
-            args =
-              if implParams == { } then
-                # Reuse existing args if impl isn't being passed anything new
-                self.args
-              else
+          # Call implementation
+          callFunction self.impl (
+            # Reuse existing args if impl isn't being passed anything new
+            if implParams == { } then
+              self.args
+            else
+              let
                 # Recompute args fixpoint with passed params
-                {
+                args = {
                   inherit (self.args) inputs;
                   options =
                     computeModuleOptions args "while calling '${self.path}'" (
@@ -282,9 +283,9 @@ let
                       inherit (self) __functor;
                     };
                 };
-          in
-          # Call implementation
-          callFunction self.impl args;
+              in
+              args
+          );
       });
     in
     self;
