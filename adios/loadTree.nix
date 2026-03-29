@@ -12,7 +12,6 @@ let
     filter
     foldl'
     functionArgs
-    head
     intersectAttrs
     isString
     listToAttrs
@@ -199,31 +198,27 @@ let
 
   # Get a module by it's / delimited path from the tree root
   fetchModule =
-    name:
-    assert name != "";
-    if name == "/" then
+    path:
+    assert path != "";
+    if path == "/" then
       tree
+    # Assert that module input begins with a /
+    else if substring 0 1 path != "/" then
+      throw ''
+        Module path `${path}` does not start with a slash.
+        Module paths should look like "/nixpkgs", which refers to `root.modules.nixpkgs`.
+      ''
     else
-      let
-        tokens = splitString "/" name;
-      in
-      # Assert that module input begins with a /
-      if head tokens != "" then
-        throw ''
-          Module path `${name}` does not start with a slash.
-          Module paths should look like "/nixpkgs", which refers to `root.modules.nixpkgs`.
-        ''
-      else
-        foldl' (
-          module: tok:
-          if !module.modules ? ${tok} then
-            throw ''
-              Module path `${tok}` is not a child module of `${module.path}`.
-              Valid children of `${module.path}`: ${printList (attrNames module.modules)}
-            ''
-          else
-            module.modules.${tok}
-        ) tree (tail tokens);
+      foldl' (
+        module: tok:
+        if !module.modules ? ${tok} then
+          throw ''
+            Module path `${tok}` is not a child module of `${module.path}`.
+            Valid children of `${module.path}`: ${printList (attrNames module.modules)}
+          ''
+        else
+          module.modules.${tok}
+      ) tree (tail (splitString "/" path));
 
   recurse =
     path: def:
