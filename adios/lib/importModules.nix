@@ -21,7 +21,7 @@ listToAttrs (
   concatMap (
     name:
     if files.${name} == "directory" then
-      if pathExists (rootPath + "/${name}") then
+      if pathExists (rootPath + "/${name}/default.nix") then
         [
           {
             inherit name;
