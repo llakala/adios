@@ -186,6 +186,14 @@ let
   splitString = sep: s: filter isString (split sep s);
 
   # Return absolute module path relative to pwd
+  # absModulePath /foo /bar
+  # => /bar
+  #
+  # absModulePath /foo ./bar
+  # => /foo/bar
+  #
+  # absModulePath /foo ../bar
+  # => /foo
   absModulePath =
     pwd: path: if substring 0 1 path == "/" then path else toString (/. + pwd + "/${path}");
 
