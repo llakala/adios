@@ -3,15 +3,15 @@
 let
   inherit (builtins)
     attrNames
-    pathExists
-    readDir
     concatMap
+    head
     listToAttrs
     match
-    head
+    pathExists
+    readDir
     ;
 
-  matchNixFile = match "(.+)\.nix$";
+  matchNixFile = match "(.+)\\.nix$";
 in
 rootPath:
 let
