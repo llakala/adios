@@ -2,10 +2,10 @@
   "pins": {
     "nixpkgs": {
       "type": "Channel",
-      "name": "nixpkgs-unstable",
-      "url": "https://releases.nixos.org/nixpkgs/nixpkgs-26.05pre905319.f720de590661/nixexprs.tar.xz",
-      "hash": "07n4hhch0j6n69b0zchdjg0l80z2xrdk7k57ykv90cvhklim5dz1"
+      "name": "nixos-unstable",
+      "url": "https://releases.nixos.org/nixos/unstable/nixos-26.05pre977467.4c1018dae018/nixexprs.tar.xz",
+      "hash": "sha256-WGjBfvXv/mcg5yBg+AtK1Q3FHyXfjAAeJROmg7DLYfM="
     }
   },
-  "version": 5
+  "version": 7
 }
