@@ -21,7 +21,6 @@ let
     tail
     ;
 
-  optionalAttrs = cond: attrs: if cond then attrs else { };
   optionals = cond: list: if cond then list else [ ];
 
   # Call a function with only it's supported attributes.
@@ -237,6 +236,7 @@ let
           def.mutations or { }
         );
         modules = mapAttrs (name: recurse "${path}/${name}") (def.modules or { });
+
         args = {
           inputs = mapAttrs (
             _: input: (fetchModule (absModulePath self.path input.path)).args.options
@@ -247,20 +247,24 @@ let
             )
             # If the current module has an impl, include it in the computed args,
             # so the module can be called inside the tree
-            // (if def ? impl then { inherit (self) __functor; } else { });
+            // {
+              ${if def ? impl then "__functor" else null} = self.__functor;
+            };
         };
-      }
-      // optionalAttrs (def ? lib) {
-        lib = checkType "${errorPrefix}: while checking 'lib'" types.modules.lib def.lib;
-      }
-      // optionalAttrs (def ? types) {
-        types = checkAttrsOfType "${errorPrefix}: while checking 'types'" types.modules.typedef def.types;
-      }
-      // (optionalAttrs (def ? impl) {
-        impl = checkType "${errorPrefix}: while checking 'impl'" types.function def.impl;
-        __functor =
+
+        # We can avoid optionalAttrs merging with null attribute names
+        ${if def ? lib then "lib" else null} =
+          checkType "${errorPrefix}: while checking 'lib'" types.modules.lib
+            def.lib;
+        ${if def ? types then "types" else null} =
+          checkAttrsOfType "${errorPrefix}: while checking 'types'" types.modules.typedef
+            def.types;
+
+        ${if def ? impl then "impl" else null} =
+          checkType "${errorPrefix}: while checking 'impl'" types.function
+            def.impl;
+        ${if def ? impl then "__functor" else null} =
           _: implParams:
-          # Call implementation
           callFunction self.impl (
             # Reuse existing args if impl isn't being passed anything new
             if implParams == { } then
@@ -286,7 +290,7 @@ let
               in
               args
           );
-      });
+      };
     in
     self;
 in

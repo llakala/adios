@@ -1,5 +1,35 @@
 Any new features or breaking changes will be listed here.
 
+# 4/26/2026
+
+- Adios modules now avoid unnecessary attrset merges when typechecking. To prevent visual noise, some attributes are
+  only included in the typechecked module if they're actually defined. To accomplish this, `optionalAttrs` was used
+  previously:
+  ```nix
+  final = {
+    options = typeCheck (def.options or {});
+    inputs = typeCheck (def.inputs or {});
+  } // optionalAttrs (def ? types) {
+    types = typeCheck def.types;
+  } // optionalAttrs (def ? lib) {
+    lib = typeCheck def.lib;
+  } // optionalAttrs (def ? impl) {
+    impl = typeCheck def.impl;
+  }
+  ```
+  However, it's actually possible to avoid this, by using null attribute names.
+  ```nix
+  final = {
+    options = typeCheck (def.options or {});
+    inputs = typeCheck (def.inputs or {});
+    ${if def ? types then "types" else null} = typeCheck def.types;
+    ${if def ? lib then "lib" else null} = typeCheck def.lib;
+    ${if def ? impl then "impl" else null} = typeCheck def.impl;
+  }
+  ```
+  Nix automatically filters out any null names, so this accomplishes the same behavior without 3 attrset merges. On my
+  end, this saves \~5kb of memory, \~150 function calls, and \~170 thunks.
+
 # 3/26/2026
 
 - The eval stage is now removed on a technical level.
