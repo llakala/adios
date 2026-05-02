@@ -58,7 +58,6 @@ let
     all
     any
     attrNames
-    concatMap
     concatStringsSep
     elem
     elemAt
@@ -277,9 +276,9 @@ fix (self: {
         typeError name attrs
       else
         let
-          errors = concatMap (key: [
-            (addErrorContext "in ${name} value: in attribute '${key}'" (verify attrs.${key}))
-          ]) (attrNames attrs);
+          errors = map (
+            key: addErrorContext "in ${name} value: in attribute '${key}'" (verify attrs.${key})
+          ) (attrNames attrs);
           # If an error was found, find the first error to return.
           recurse =
             i:
