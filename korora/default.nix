@@ -77,7 +77,7 @@ let
     split
     ;
 
-  isDerivation = value: isAttrs value && (value.type or null == "derivation");
+  isDerivation = value: value.type or null == "derivation";
 
   optionalElem = cond: e: if cond then [ e ] else [ ];
 
