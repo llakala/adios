@@ -31,10 +31,7 @@ let
   # Check a single type with error prefix
   checkType =
     errorPrefix: type: value:
-    let
-      err = type.verify value;
-    in
-    if err == null then value else throw "${errorPrefix}: ${err}";
+    if type.verify value == null then value else throw "${errorPrefix}: ${type.verify value}";
 
   # Lazy type check an attrset
   checkAttrsOfType =
@@ -45,10 +42,10 @@ let
 
   checkOption =
     errorPrefix: option: value:
-    let
-      err = option.type.verify value;
-    in
-    if err != null then throw "${errorPrefix}: type error: ${err}" else value;
+    if option.type.verify value != null then
+      throw "${errorPrefix}: type error: ${option.type.verify value}"
+    else
+      value;
 
   # Compute options from defaults & provided args
   computeOptions =
