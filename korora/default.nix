@@ -275,19 +275,9 @@ fix (self: {
       if !isAttrs attrs then
         typeError name attrs
       else
-        let
-          errors = map (
-            key: addErrorContext "in ${name} value: in attribute '${key}'" (verify attrs.${key})
-          ) (attrNames attrs);
-          # If an error was found, find the first error to return.
-          recurse =
-            i:
-            let
-              v = elemAt errors i;
-            in
-            if v != null then v else recurse (i + 1);
-        in
-        if all (err: err == null) errors then null else recurse 0
+        all' (key: addErrorContext "in ${name} value: in attribute '${key}'" (verify attrs.${key})) (
+          attrNames attrs
+        )
     );
 
   /*
