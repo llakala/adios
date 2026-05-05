@@ -410,16 +410,6 @@ fix (self: {
         assert isBool unknown;
         assert verify != null -> isFunction verify;
         let
-          optionalFuncs =
-            optionalElem (!unknown) (
-              v:
-              if removeAttrs v names == { } then
-                null
-              else
-                "keys [${joinKeys (attrNames (removeAttrs v names))}] are unrecognized, expected keys are [${joinKeys names}]"
-            )
-            ++ optionalElem (verify != null) verify;
-
           # Turn member verifications into a list of verification functions with their verify functions
           # already looked up & with error contexts already computed.
           verifyAttrs = map (
@@ -442,10 +432,18 @@ fix (self: {
             )
           ) names;
 
+          allFuncs =
+            verifyAttrs
+            ++ optionalElem (!unknown) (
+              v:
+              if removeAttrs v names == { } then
+                null
+              else
+                "keys [${joinKeys (attrNames (removeAttrs v names))}] are unrecognized, expected keys are [${joinKeys names}]"
+            )
+            ++ optionalElem (verify != null) verify;
+
           verify' =
-            let
-              allFuncs = verifyAttrs ++ optionalFuncs;
-            in
             v:
             if all (func: func v == null) allFuncs then
               null
