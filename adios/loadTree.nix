@@ -49,10 +49,10 @@ let
 
   # Compute options from defaults & provided args
   computeOptions =
-    # Defined options
-    options:
     # Path from root of the current module
     modulePath:
+    # Defined options
+    options:
     # Computed args fixpoint
     args:
     # Error prefix string
@@ -85,7 +85,7 @@ let
         # Compute nested options
         else if option ? options then
           let
-            value = computeOptions option.options modulePath args errorPrefix' (params.${name} or { });
+            value = computeOptions modulePath option.options args errorPrefix' (params.${name} or { });
           in
           # Only return a value if suboptions actually returned anything
           if value != { } then [ { inherit name value; } ] else [ ]
@@ -220,7 +220,7 @@ let
     path: def:
     let
       errorPrefix = "in module '${path}'";
-      computeModuleOptions = computeOptions self.options self.path;
+      computeModuleOptions = computeOptions self.path self.options;
       self = {
         path = if path == "" then "/" else path;
         options = checkAttrsOfType "${errorPrefix}: while checking 'options'" types.modules.option (
