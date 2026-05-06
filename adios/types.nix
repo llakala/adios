@@ -74,9 +74,24 @@ let
       modules.subOptions
     ];
 
+    optionOverride =
+      (struct "optionOverride" {
+        value = optionalAttr any;
+        computedValue = optionalAttr function;
+      }).override
+        {
+          verify =
+            option:
+            if option ? value && option ? computedValue then
+              "'value' & 'computedValue' are mutually exclusive"
+            else
+              null;
+        };
+
     input = struct "input" {
       # Note: The lack of a type for an input means no type checking done.
       type = optionalAttr type;
+      overrides = optionalAttr (attrsOf modules.optionOverride);
       # TODO: Narrow permitted chars
       path = typedef "pathstring" isString;
     };

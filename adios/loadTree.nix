@@ -154,6 +154,25 @@ let
       ]
     );
 
+  overrideOptions =
+    let
+      removed = [
+        "default"
+        "defaultFunc"
+      ];
+    in
+    old: new:
+    mapAttrs (
+      name: newOption:
+      removeAttrs old.${name} removed
+      // {
+        ${if newOption ? value || newOption == { } then "default" else null} =
+          newOption.value or old.${name}.default;
+        ${if newOption ? computedValue || newOption == { } then "defaultFunc" else null} =
+          newOption.computedValue or old.${name}.defaultFunc;
+      }
+    ) new;
+
   # Merge lhs & rhs recursing into suboptions
   mergeParamsUnchecked =
     options: lhs: rhs:
@@ -220,7 +239,7 @@ let
     path: def:
     let
       errorPrefix = "in module '${path}'";
-      computeModuleOptions = computeOptions self.path self.options;
+      computeModuleOptions = computeOptions self.path;
       self = {
         path = if path == "" then "/" else path;
         options = checkAttrsOfType "${errorPrefix}: while checking 'options'" types.modules.option (
@@ -236,10 +255,63 @@ let
 
         args = {
           inputs = mapAttrs (
-            _: input: (fetchModule (absModulePath self.path input.path)).args.options
+            _: inputDef:
+            let
+              inputModule = fetchModule (absModulePath self.path inputDef.path);
+            in
+            if !inputDef ? overrides then
+              inputModule.args.options
+            else
+              let
+                # Merge the module's original option definitions with our
+                # overrides
+                overrides = {
+                  options = overrideOptions inputModule.options inputDef.overrides;
+                  inherit (self) path args;
+                };
+                # Recompute args with any lookups for the module's options
+                # instead pointing to our overridden version
+                args = inputModule.args.recompute overrides { };
+              in
+              args.options
+              // {
+                __functor =
+                  _: implParams:
+                  callFunction inputModule.impl (
+                    if implParams == { } then args else inputModule.args.recompute overrides implParams
+                  );
+              }
           ) self.inputs;
+          recompute =
+            overrides: passedParams:
+            let
+              params =
+                if evalParams ? ${self.path} then
+                  mergeParamsUnchecked self.options evalParams.${self.path} passedParams
+                else
+                  passedParams;
+              newArgs = {
+                inherit (self.args) inputs;
+                options =
+                  computeModuleOptions self.options newArgs "while calling '${self.path}'" params
+                  // (
+                    if overrides != { } then
+                      computeModuleOptions overrides.options overrides.args
+                        "while calling overrides from '${overrides.path}'"
+                        params
+                    else
+                      { }
+                  )
+                  # Current module necessarily defines a functor - include
+                  # it in the computed args
+                  // {
+                    inherit (self) __functor;
+                  };
+              };
+            in
+            newArgs;
           options =
-            computeModuleOptions self.args "while computing '${self.path}' args" (
+            computeModuleOptions self.options self.args "while computing '${self.path}' args" (
               evalParams.${self.path} or { }
             )
             # If the current module has an impl, include it in the computed args,
@@ -263,29 +335,7 @@ let
         ${if def ? impl then "__functor" else null} =
           _: implParams:
           callFunction self.impl (
-            # Reuse existing args if impl isn't being passed anything new
-            if implParams == { } then
-              self.args
-            else
-              let
-                # Recompute args fixpoint with passed params
-                args = {
-                  inherit (self.args) inputs;
-                  options =
-                    computeModuleOptions args "while calling '${self.path}'" (
-                      if evalParams ? ${self.path} then
-                        mergeParamsUnchecked self.options evalParams.${self.path} implParams
-                      else
-                        implParams
-                    )
-                    # Current module necessarily defines a functor - include
-                    # it in the computed args
-                    // {
-                      inherit (self) __functor;
-                    };
-                };
-              in
-              args
+            if implParams == { } then self.args else self.args.recompute { } implParams
           );
       };
     in

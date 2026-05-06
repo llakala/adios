@@ -1,5 +1,50 @@
 Any new features or breaking changes will be listed here.
 
+# 5/6/2026
+- Adios now supports setting option overrides for an input module outside of a function. Previously, to call some input
+  module, the arguments to be passed had to be defined inline:
+  ```nix
+  inputs = {
+    someModule.path = "/someModule";
+  };
+  impl =
+    { options, inputs }:
+    inputs.someModule {
+      firstArg = 1;
+      secondArg = all (x: x == true) [ true true false ];
+    };
+  ```
+  These arguments being within the scope of a function resulted in it being difficult/impossible to override the
+  arguments being passed to `input.someModule`. the `recursiveUpdate` method only works if all the attributes are
+  actually accessible. This problem is why `stdenv.mkDerivation` offers `overrideAttrs` - within nixpkgs, you could
+  trivially run a `.override` on the options specified by the file, but you couldn't change the arguments to the
+  derivation function.
+
+  We takes a different, more generalized approach. Rather than running an override on the result of an existing
+  computation, the arguments to an input module can now moved outside of the scope of a function.
+  ```nix
+  inputs = {
+    someModule = {
+      path = "/someModule";
+      overrides = {
+        firstArg.value = 1;
+        secondArg.computedValue = {}: all (x: x == true) [ true true false ];
+      }
+    };
+  };
+  impl =
+    { options, inputs }:
+    inputs.someModule {};
+  ```
+  This allows module consumers to easily change the arguments to `inputs.someModule` utilizing `recursiveUpdate`. Note
+  that arguments can still be specified in `inputs.someModule {}`. This is to allow for multiple "variants" of an input
+  module within the same module. However, this is a footgun, so I'd love to remove it in favor of `results.someModule`
+  to access the result of some input module's `impl`.
+
+  This also opens the door to:
+  - better `impl` semantics
+  - renaming `default` and `defaultFunc` to `value` and `computedValue`, which would improve injection semantics
+
 # 4/26/2026
 
 - Adios modules now avoid unnecessary attrset merges when typechecking. To prevent visual noise, some attributes are
