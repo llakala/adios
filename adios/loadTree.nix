@@ -155,7 +155,7 @@ let
     );
 
   # Merge lhs & rhs recursing into suboptions
-  mergeOptionsUnchecked =
+  mergeParamsUnchecked =
     options: lhs: rhs:
     lhs
     // rhs
@@ -169,7 +169,7 @@ let
           [
             {
               name = optionName;
-              value = mergeOptionsUnchecked option.options (lhs.${optionName} or { }) (rhs.${optionName} or { });
+              value = mergeParamsUnchecked option.options (lhs.${optionName} or { }) (rhs.${optionName} or { });
             }
           ]
         else
@@ -274,7 +274,7 @@ let
                   options =
                     computeModuleOptions args "while calling '${self.path}'" (
                       if evalParams ? ${self.path} then
-                        mergeOptionsUnchecked self.options evalParams.${self.path} implParams
+                        mergeParamsUnchecked self.options evalParams.${self.path} implParams
                       else
                         implParams
                     )
