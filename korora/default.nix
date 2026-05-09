@@ -415,21 +415,13 @@ fix (self: {
           verifyAttrs = map (
             attr:
             let
-              memberType = members.${attr};
-              inherit (memberType) verify;
+              inherit (members.${attr}) verify;
               withErrorContext = addErrorContext "in member '${attr}'";
-              missingMember = "missing member '${attr}'";
-              isOptionalAttr = memberType.__optional;
             in
-            v:
-            (
-              if v ? ${attr} then
-                withErrorContext (verify v.${attr})
-              else if total && (!isOptionalAttr) then
-                missingMember
-              else
-                null
-            )
+            if members.${attr}.__optional or (!total) then
+              v: if v ? ${attr} then withErrorContext (verify v.${attr}) else null
+            else
+              v: if v ? ${attr} then withErrorContext (verify v.${attr}) else "missing member '${attr}'"
           ) names;
 
           allFuncs =
