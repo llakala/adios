@@ -419,7 +419,7 @@ fix (self: {
               inherit (memberType) verify;
               withErrorContext = addErrorContext "in member '${attr}'";
               missingMember = "missing member '${attr}'";
-              isOptionalAttr = memberType.__name == "optionalAttr";
+              isOptionalAttr = memberType.__optional;
             in
             v:
             (
@@ -471,13 +471,18 @@ fix (self: {
     optionalAttr<t>
   */
   optionalAttr =
+    let
+      makeOptional = {
+        __optional = true;
+      };
+    in
     t:
     let
       name = "optionalAttr<${t.name}>";
       inherit (t) verify;
       withErrorContext = addErrorContext "in ${name}";
     in
-    self.typedef' name (v: withErrorContext (verify v));
+    self.typedef' name (v: withErrorContext (verify v)) // makeOptional;
 
   /*
     enum<name, elems...>
