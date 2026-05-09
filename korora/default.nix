@@ -450,9 +450,27 @@ fix (self: {
                 else
                   null
               ) null allFuncs;
-
         in
-        (self.typedef' name (v: withErrorContext (if !isAttrs v then typeError name v else verify' v)))
+        self.typedef' name (
+          v:
+          withErrorContext (
+            if !isAttrs v then
+              typeError name v
+            else if all (func: func v == null) allFuncs then
+              null
+            else
+              # If an error was found, run the checks again to find the first error to return.
+              foldl' (
+                acc: func:
+                if acc != null then
+                  acc
+                else if func v != null then
+                  func v
+                else
+                  null
+              ) null allFuncs
+          )
+        )
         // {
           override = mkStruct';
         };
