@@ -234,14 +234,18 @@ fix (self: {
     v: isAttrs v && v ? name && isString v.name && v ? verify && isFunction v.verify
   );
 
-  /*
-    optional<t>
-  */
   optional =
+    (builtins.warn or builtins.trace) "Adios type 'optional<t>' has been renamed to 'nullOr<t>'"
+      self.nullOr;
+
+  /*
+    nullOr<t>
+  */
+  nullOr =
     # Null or t
     t:
     let
-      name = "optional<${t.name}>";
+      name = "nullOr<${t.name}>";
       inherit (t) verify;
       withErrorContext = addErrorContext "in ${name}";
     in

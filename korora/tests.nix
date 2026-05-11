@@ -339,9 +339,9 @@ lib.fix (
       };
     };
 
-    optional =
+    nullOr =
       let
-        testOption = types.optional types.string;
+        testOption = types.nullOr types.string;
       in
       {
         testValidString = {
@@ -356,7 +356,7 @@ lib.fix (
 
         testInvalid = {
           expr = testOption.verify 3;
-          expected = "in optional<string>: Expected type 'string' but value '3' failed the type check";
+          expected = "in nullOr<string>: Expected type 'string' but value '3' failed the type check";
         };
       };
 

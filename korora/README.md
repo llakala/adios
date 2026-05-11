@@ -142,9 +142,9 @@ Derivation
 
 Type
 
-## `types.optional`
+## `types.nullOr`
 
-optional<t>
+nullOr<t>
 
 `t`
 

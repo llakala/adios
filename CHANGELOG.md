@@ -1,5 +1,11 @@
 Any new features or breaking changes will be listed here.
 
+# 5/11/2026
+
+- `types.optional` has been renamed to `types.nullOr`, and now warns on usage. While optional has a specific meaning in languages with sum
+  types, it's often used in other ways in a nix context (see optionalString, optionalAttrs, optionals, etc). To clarify
+  the purpose of the type.
+
 # 4/26/2026
 
 - Adios modules now avoid unnecessary attrset merges when typechecking. To prevent visual noise, some attributes are
