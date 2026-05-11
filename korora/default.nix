@@ -434,22 +434,6 @@ fix (self: {
                 "keys [${joinKeys (attrNames (removeAttrs v names))}] are unrecognized, expected keys are [${joinKeys names}]"
             )
             ++ optionalElem (verify != null) verify;
-
-          verify' =
-            v:
-            if all (func: func v == null) allFuncs then
-              null
-            else
-              # If an error was found, run the checks again to find the first error to return.
-              foldl' (
-                acc: func:
-                if acc != null then
-                  acc
-                else if func v != null then
-                  func v
-                else
-                  null
-              ) null allFuncs;
         in
         self.typedef' name (
           v:
