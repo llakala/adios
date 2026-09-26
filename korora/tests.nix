@@ -16,8 +16,6 @@ let
     typeError = true;
     toPretty = true;
     optional = true;
-    findFirstValue = true;
-    findFirstFunction = true;
     typedef = true;
     typedef' = true;
     new = true;
@@ -46,7 +44,7 @@ lib.fix (
     string = {
       testInvalid = {
         expr = types.string.inspect 1;
-        expected = "in type 'string': value '1' failed the type check";
+        expected = "value '1' is not of type 'string'";
       };
 
       testValid = {
@@ -58,7 +56,7 @@ lib.fix (
     function = {
       testInvalid = {
         expr = types.function.inspect 1;
-        expected = "in type 'function': value '1' failed the type check";
+        expected = "value '1' is not of type 'function'";
       };
 
       testValid = {
@@ -70,7 +68,7 @@ lib.fix (
     path = {
       testInvalid = {
         expr = types.path.inspect 1;
-        expected = "in type 'path': value '1' failed the type check";
+        expected = "value '1' is not of type 'path'";
       };
 
       testValid = {
@@ -82,7 +80,7 @@ lib.fix (
     pathLike = {
       testInvalid = {
         expr = types.pathLike.inspect 1;
-        expected = "in type 'pathLike': value '1' failed the type check";
+        expected = "value '1' is not of type 'pathLike'";
       };
 
       testPath = {
@@ -100,7 +98,7 @@ lib.fix (
     derivation = {
       testInvalid = {
         expr = types.derivation.inspect { };
-        expected = "in type 'derivation': value '{ }' failed the type check";
+        expected = "value '{ }' is not of type 'derivation'";
       };
 
       testValid = {
@@ -125,14 +123,14 @@ lib.fix (
     never = {
       testInvalid = {
         expr = types.never.inspect 1234;
-        expected = "in type 'never': value '1234' failed the type check";
+        expected = "value '1234' is not of type 'never'";
       };
     };
 
     int = {
       testInvalid = {
         expr = types.int.inspect "x";
-        expected = "in type 'int': value '\"x\"' failed the type check";
+        expected = "value '\"x\"' is not of type 'int'";
       };
 
       testValid = {
@@ -144,7 +142,7 @@ lib.fix (
     float = {
       testInvalid = {
         expr = types.float.inspect "x";
-        expected = "in type 'float': value '\"x\"' failed the type check";
+        expected = "value '\"x\"' is not of type 'float'";
       };
 
       testValid = {
@@ -156,7 +154,7 @@ lib.fix (
     number = {
       testInvalid = {
         expr = types.number.inspect "x";
-        expected = "in type 'number': value '\"x\"' failed the type check";
+        expected = "value '\"x\"' is not of type 'number'";
       };
 
       testValidInt = {
@@ -173,7 +171,7 @@ lib.fix (
     bool = {
       testInvalid = {
         expr = types.bool.inspect "x";
-        expected = "in type 'bool': value '\"x\"' failed the type check";
+        expected = "value '\"x\"' is not of type 'bool'";
       };
 
       testValid = {
@@ -185,7 +183,7 @@ lib.fix (
     null = {
       testInvalid = {
         expr = types.null.inspect "x";
-        expected = "in type 'null': value '\"x\"' failed the type check";
+        expected = "value '\"x\"' is not of type 'null'";
       };
 
       testValid = {
@@ -197,7 +195,7 @@ lib.fix (
     attrs = {
       testInvalid = {
         expr = types.attrs.inspect "x";
-        expected = "in type 'attrs': value '\"x\"' failed the type check";
+        expected = "value '\"x\"' is not of type 'attrs'";
       };
 
       testValid = {
@@ -209,7 +207,7 @@ lib.fix (
     list = {
       testInvalid = {
         expr = types.list.inspect "x";
-        expected = "in type 'list': value '\"x\"' failed the type check";
+        expected = "value '\"x\"' is not of type 'list'";
       };
 
       testValid = {
@@ -230,12 +228,12 @@ lib.fix (
 
         testInvalidElem = {
           expr = testListOf.inspect [ 1 ];
-          expected = "in type 'listOf<string>': in element: value '1' failed the type check";
+          expected = "in type 'listOf<string>': in element: value '1' is not of type 'string'";
         };
 
         testInvalidType = {
           expr = testListOf.inspect 1;
-          expected = "in type 'listOf<string>': value '1' failed the type check";
+          expected = "in type 'listOf<string>': value '1' is not of type 'list'";
         };
       };
 
@@ -255,12 +253,12 @@ lib.fix (
           expr = testAttrsOf.inspect {
             x = 1;
           };
-          expected = "in type 'attrsOf<string>': in attribute 'x': value '1' failed the type check";
+          expected = "in type 'attrsOf<string>': in attribute 'x': value '1' is not of type 'string'";
         };
 
         testInvalidType = {
           expr = testAttrsOf.inspect 1;
-          expected = "in type 'attrsOf<string>': value '1' failed the type check";
+          expected = "in type 'attrsOf<string>': value '1' is not of type 'attrs'";
         };
       };
 
@@ -284,7 +282,7 @@ lib.fix (
 
         testInvalid = {
           expr = testUnion.inspect 1;
-          expected = "in type 'union<string,bool>': value '1' failed the type check";
+          expected = "value '1' is not of type 'union<string,bool>'";
         };
       };
 
@@ -305,7 +303,7 @@ lib.fix (
 
         testInvalid = {
           expr = testEither.inspect 1;
-          expected = "in type 'either<string,bool>': value '1' failed the type check";
+          expected = "value '1' is not of type 'either<string,bool>'";
         };
       };
 
@@ -334,7 +332,7 @@ lib.fix (
 
         testInvalid = {
           expr = testIntersection.inspect 1;
-          expected = "in type 'intersection<struct<1>,struct<2>>': value '1' failed the type check";
+          expected = "value '1' is not of type 'intersection<struct<1>,struct<2>>'";
         };
       };
 
@@ -354,11 +352,11 @@ lib.fix (
         };
         testInvalid1 = {
           expr = testBoth.inspect (-1);
-          expected = "in type 'all<int,positive>': value '-1' failed the type check";
+          expected = "value '-1' is not of type 'all<int,positive>'";
         };
         testInvalid2 = {
           expr = testBoth.inspect "no";
-          expected = "in type 'all<int,positive>': value '\"no\"' failed the type check";
+          expected = "value '\"no\"' is not of type 'all<int,positive>'";
         };
       };
 
@@ -370,13 +368,16 @@ lib.fix (
 
       testInvalid = {
         expr = types.type.inspect { };
-        expected = "in type 'type': value '{ }' failed the type check";
+        expected = "value '{ }' is not of type 'type'";
       };
     };
 
     nullOr =
       let
         testOption = types.nullOr types.string;
+        testStruct = types.struct "test-struct" {
+          foo = testOption;
+        };
       in
       {
         testValidString = {
@@ -391,7 +392,11 @@ lib.fix (
 
         testInvalid = {
           expr = testOption.inspect 3;
-          expected = "in type 'nullOr<string>': value '3' failed the type check";
+          expected = "value '3' is not of type 'nullOr<string>'";
+        };
+        testInvalidWithinStruct = {
+          expr = testStruct.inspect { foo = 5; };
+          expected = "in type 'struct<test-struct>': in member 'foo': value '5' is not of type 'nullOr<string>'";
         };
       };
 
@@ -458,14 +463,14 @@ lib.fix (
 
         testInvalidType = {
           expr = testStruct.inspect "bar";
-          expected = "in type 'struct<test1>': value '\"bar\"' failed the type check";
+          expected = "in type 'struct<test1>': value '\"bar\"' is not of type 'attrs'";
         };
 
         testInvalidMember = {
           expr = testStruct.inspect {
             foo = 1;
           };
-          expected = "in type 'struct<test1>': in member 'foo' of type 'string': value '1' failed the type check";
+          expected = "in type 'struct<test1>': in member 'foo': value '1' is not of type 'string'";
         };
       };
 
@@ -498,7 +503,7 @@ lib.fix (
             foo = "hello";
             optionalFoo = 1234;
           };
-          expected = "in type 'struct<testOptionalAttr>': in member 'optionalFoo' of type 'optionalAttr<string>': value '1234' failed the type check";
+          expected = "in type 'struct<testOptionalAttr>': in member 'optionalFoo': value '1234' is not of type 'string'";
         };
       };
 
@@ -549,7 +554,7 @@ lib.fix (
       {
         testNotList = {
           expr = testTuple.inspect "xyz";
-          expected = "in type 'tuple<string,int>': value '\"xyz\"' failed the type check";
+          expected = "in type 'tuple<string,int>': value '\"xyz\"' is not of type 'list'";
         };
 
         testInvalidLength = {
@@ -562,7 +567,7 @@ lib.fix (
             123
             "xyz"
           ];
-          expected = "in type 'tuple<string,int>': in element 0 of type 'string': value '123' failed the type check";
+          expected = "in type 'tuple<string,int>': in element 0: value '123' is not of type 'string'";
         };
 
         testInvalidTypeTail = {
@@ -570,7 +575,7 @@ lib.fix (
             "xyz"
             "123"
           ];
-          expected = "in type 'tuple<string,int>': in element 1 of type 'int': value '\"123\"' failed the type check";
+          expected = "in type 'tuple<string,int>': in element 1: value '\"123\"' is not of type 'int'";
         };
 
         testValid = {

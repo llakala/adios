@@ -113,9 +113,12 @@ let
 
   toPretty = (import ./lib.nix).toPretty { indent = "    "; };
 
-  defaultError =
+  notOfType =
     # value that failed the type check
-    v: "value '${toPretty v}' failed the type check";
+    name: v: "value '${toPretty v}' is not of type '${name}'";
+
+  toErrorMessage =
+    name: explain: if explain == null then notOfType name else v: "in type '${name}': ${explain v}";
 
   fix =
     f:
@@ -197,12 +200,15 @@ fix (self: {
       # Returns true/false representing a success/failure.
       verify,
       # Function to generate an error message when the verify function fails.
-      explain ? defaultError,
+      explain ? null,
     }:
     assert isFunction verify;
     {
-      inherit name verify explain;
-      inspect = v: if verify v then null else "in type '${name}': ${explain v}";
+      inherit name verify;
+      # TODO: remove type prefixing so this isn't necessary anymore
+      __explain = explain;
+      explain = toErrorMessage name explain;
+      inspect = v: if verify v then null else toErrorMessage name explain v;
       check =
         v:
         if verify v == true then
@@ -210,7 +216,7 @@ fix (self: {
         else if verify v == null then
           seq nullWarning v
         else
-          throw "in type '${name}': ${explain v}";
+          throw (toErrorMessage name explain v);
     };
 
   /*
@@ -252,7 +258,9 @@ fix (self: {
     Basic error function. Used internally, but also useful to throw errors in a
     custom type.
   */
-  typeError = defaultError;
+  typeError =
+    # value that failed the type check
+    v: "value '${toPretty v}' failed the type check";
 
   /*
     Used internally, but also useful in documentation generation.
@@ -398,7 +406,6 @@ fix (self: {
     self.new {
       name = "nullOr<${t.name}>";
       verify = v: v == null || verify v;
-      explain = t.explain; # TODO: custom error message
     };
 
   /*
@@ -416,7 +423,7 @@ fix (self: {
       explain =
         list:
         if !isList list then
-          defaultError list
+          notOfType "list" list
         else
           "in element: ${explainFirstFailingValue t.verify t.explain list}";
     };
@@ -436,7 +443,7 @@ fix (self: {
       explain =
         attrs:
         if !isAttrs attrs then
-          defaultError attrs
+          notOfType "attrs" attrs
         else
           explainFirstFailingValue (key: t.verify attrs.${key}) (
             key: "in attribute '${key}': ${t.explain attrs.${key}}"
@@ -655,7 +662,7 @@ fix (self: {
           explain =
             v:
             if !isAttrs v then
-              defaultError v
+              notOfType "attrs" v
             else
               let
                 explainers =
@@ -665,13 +672,13 @@ fix (self: {
                       type = types.${attr};
                     in
                     if type.__optional or (!total) then
-                      v: "in member '${attr}' of type '${type.name}': ${type.explain v.${attr}}"
+                      v: "in member '${attr}': ${type.explain v.${attr}}"
                     else
                       v:
                       if !v ? ${attr} then
                         "missing member '${attr}'"
                       else
-                        "in member '${attr}' of type '${type.name}': ${type.explain v.${attr}}"
+                        "in member '${attr}': ${type.explain v.${attr}}"
                   ) names
                   ++ optionalElem (!unknown) (
                     v:
@@ -696,17 +703,16 @@ fix (self: {
     optionalAttr<t>
   */
   optionalAttr =
-    let
-      makeOptional = {
-        __optional = true;
-      };
-    in
     t:
     self.new {
       name = "optionalAttr<${t.name}>";
-      inherit (t) verify explain;
+      inherit (t) verify;
     }
-    // makeOptional;
+    // {
+      __optional = true;
+      # propagate original error, optionalAttr is implementation detail
+      explain = t.explain;
+    };
 
   /*
     enum<name, elems...>
@@ -740,7 +746,7 @@ fix (self: {
       explain =
         tuple:
         if !isList tuple then
-          defaultError tuple
+          notOfType "list" tuple
         else if length tuple != len then
           "expected tuple of length ${toString len} but value '${toPretty tuple}' has length ${toString (length tuple)}"
         else
@@ -750,7 +756,7 @@ fix (self: {
               let
                 type = elemAt types i;
               in
-              v: "in element ${toString i} of type '${type.name}': ${type.explain (elemAt v i)}"
+              v: "in element ${toString i}: ${type.explain (elemAt v i)}"
             ) len;
           in
           explainFirstFailingFunction verifiers explainers tuple;

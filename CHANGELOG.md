@@ -1,5 +1,23 @@
 Any new features or breaking changes will be listed here.
 
+# Improved formatting of type errors
+
+Type errors from Korora (our internal type library) now put the name of the type _after_ the value that failed to
+match.
+
+Where errors would previously look like:
+```
+in type 'attrsOf<string>': in attribute 'x': value '1' failed the type check
+```
+
+They now look like:
+```
+in type 'attrsOf<string>': in attribute 'x': value '1' is not of type 'string'
+```
+
+This simple change should make errors much easier to parse. Of course, there's still room to grow - feel free to PR
+more improvements!
+
 # Warn on missing mutations
 
 Modules listed in an option's `mutators` which do not have a corresponding `.mutations."/option-module".option-name` now warn when the option is evaluated.

@@ -85,7 +85,7 @@ mapAttrs testModules {
         };
         impl = { options }: options.test;
       };
-      expectedError.msg = "in type 'string': value '0' failed the type check";
+      expectedError.msg = "value '0' is not of type 'string'";
     };
 
     testAllAttributes = {
