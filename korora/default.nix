@@ -111,7 +111,7 @@ let
 
   joinKeys = list: concatStringsSep ", " (map (e: "'${e}'") list);
 
-  toPretty = (import ./lib.nix).toPretty { indent = "    "; };
+  toPretty = import ./toPretty.nix { indent = "    "; };
 
   notOfType =
     # value that failed the type check
@@ -260,7 +260,7 @@ fix (self: {
   /*
     Used internally, but also useful in documentation generation.
   */
-  toPretty = (import ./lib.nix).toPretty;
+  toPretty = import ./toPretty.nix;
 
   # Primitive types
 
