@@ -183,7 +183,6 @@ let
     See the lladios changelog for rationale and a migration guide:
     https://github.com/llakala/lladios/blob/main/CHANGELOG.md#new-typedef-function
   '' null;
-
 in
 fix (self: {
 
@@ -202,7 +201,6 @@ fix (self: {
       # Function to generate an error message when the verify function fails.
       explain ? null,
     }:
-    assert isFunction verify;
     {
       inherit name verify;
       # TODO: remove type prefixing so this isn't necessary anymore
