@@ -120,8 +120,6 @@ let
     v:
     "value '${toPretty v}' is not of type '${name}'";
 
-  toErrorMessage = name: explain: if explain == null then notOfType name else explain;
-
   fix =
     f:
     let
@@ -201,12 +199,11 @@ fix (self: {
       # Returns true/false representing a success/failure.
       verify,
       # Function to generate an error message when the verify function fails.
-      explain ? null,
+      explain ? notOfType name,
     }:
     {
-      inherit name verify;
-      explain = toErrorMessage name explain;
-      inspect = v: if verify v then null else toErrorMessage name explain v;
+      inherit name verify explain;
+      inspect = v: if verify v then null else explain v;
       check =
         v:
         if verify v == true then
@@ -214,7 +211,7 @@ fix (self: {
         else if verify v == null then
           seq nullWarning v
         else
-          throw (toErrorMessage name explain v);
+          throw (explain v);
     };
 
   /*
