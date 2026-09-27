@@ -400,6 +400,11 @@ Custom struct verification functions can be added as such:
 
 optionalAttr<t>
 
+`t`
+
+: Function argument
+
+
 ## `types.enum`
 
 enum<name, elems...>

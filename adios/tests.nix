@@ -142,7 +142,7 @@ mapAttrs testModules {
         };
         impl = { options }: options.test;
       };
-      expectedError.msg = "in type 'option': 'default' & 'defaultFunc' are mutually exclusive";
+      expectedError.msg = "in struct 'option': 'default' & 'defaultFunc' are mutually exclusive";
     };
 
   };
@@ -332,7 +332,7 @@ mapAttrs testModules {
         };
         impl = { options }: options.foo;
       };
-      expectedError.msg = "in type 'option': if 'mutators' are specified, 'mergeFunc' must be as well";
+      expectedError.msg = "in struct 'option': if 'mutators' are specified, 'mergeFunc' must be as well";
     };
   };
 
@@ -381,7 +381,7 @@ mapAttrs testModules {
         };
         impl = { options }: options.test;
       };
-      expectedError.msg = "in type 'option': keys \\['default', 'type'\\] are unrecognized, expected keys are \\['description', 'example', 'options'\\]";
+      expectedError.msg = "in struct 'subOptions': keys \\['default', 'type'\\] are unrecognized, expected keys are \\['description', 'example', 'options'\\]";
     };
   };
 

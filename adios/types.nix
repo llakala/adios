@@ -59,9 +59,9 @@ let
     option =
       let
         verifyNormalOption = modules.normalOption.verify;
-        explainNormalOption = modules.normalOption.__explain;
+        explainNormalOption = modules.normalOption.explain;
         verifySubOptions = modules.subOptions.verify;
-        explainSubOptions = modules.subOptions.__explain;
+        explainSubOptions = modules.subOptions.explain;
       in
       new {
         name = "option";

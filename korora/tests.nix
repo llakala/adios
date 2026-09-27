@@ -396,7 +396,7 @@ lib.fix (
         };
         testInvalidWithinStruct = {
           expr = testStruct.inspect { foo = 5; };
-          expected = "in type 'struct<test-struct>': in member 'foo': value '5' is not of type 'nullOr<string>'";
+          expected = "in struct 'test-struct': in member 'foo': value '5' is not of type 'nullOr<string>'";
         };
       };
 
@@ -429,7 +429,7 @@ lib.fix (
 
         testMissingAttr = {
           expr = testStruct.inspect { };
-          expected = "in type 'struct<test1>': missing member 'foo'";
+          expected = "in struct 'test1': missing member 'foo'";
         };
 
         testNonTotal = {
@@ -442,7 +442,7 @@ lib.fix (
             x = 1;
             y = 1;
           };
-          expected = "in type 'struct<test2>': VERBOTEN";
+          expected = "in struct 'test2': VERBOTEN";
         };
 
         testUnknownAttrNotAllowed = {
@@ -450,7 +450,7 @@ lib.fix (
             foo = "bar";
             bar = "foo";
           };
-          expected = "in type 'struct<test1>': keys ['bar'] are unrecognized, expected keys are ['foo']";
+          expected = "in struct 'test1': keys ['bar'] are unrecognized, expected keys are ['foo']";
         };
 
         testUnknownAttr = {
@@ -463,14 +463,14 @@ lib.fix (
 
         testInvalidType = {
           expr = testStruct.inspect "bar";
-          expected = "in type 'struct<test1>': value '\"bar\"' is not of type 'attrs'";
+          expected = "in struct 'test1': value '\"bar\"' is not of type 'attrs'";
         };
 
         testInvalidMember = {
           expr = testStruct.inspect {
             foo = 1;
           };
-          expected = "in type 'struct<test1>': in member 'foo': value '1' is not of type 'string'";
+          expected = "in struct 'test1': in member 'foo': value '1' is not of type 'string'";
         };
       };
 
@@ -503,7 +503,7 @@ lib.fix (
             foo = "hello";
             optionalFoo = 1234;
           };
-          expected = "in type 'struct<testOptionalAttr>': in member 'optionalFoo': value '1234' is not of type 'string'";
+          expected = "in struct 'testOptionalAttr': in member 'optionalFoo': value '1234' is not of type 'string'";
         };
       };
 
@@ -523,7 +523,7 @@ lib.fix (
 
         testNotHasElem = {
           expr = testEnum.inspect "nope";
-          expected = "in type 'testEnum': '\"nope\"' is not a member of enum 'testEnum'";
+          expected = "in type 'testEnum': '\"nope\"' is not a member of the enum";
         };
       };
 
@@ -567,7 +567,7 @@ lib.fix (
             123
             "xyz"
           ];
-          expected = "in type 'tuple<string,int>': in element 0: value '123' is not of type 'string'";
+          expected = "in element 0 of type 'tuple<string,int>': value '123' is not of type 'string'";
         };
 
         testInvalidTypeTail = {
@@ -575,7 +575,7 @@ lib.fix (
             "xyz"
             "123"
           ];
-          expected = "in type 'tuple<string,int>': in element 1: value '\"123\"' is not of type 'int'";
+          expected = "in element 1 of type 'tuple<string,int>': value '\"123\"' is not of type 'int'";
         };
 
         testValid = {
