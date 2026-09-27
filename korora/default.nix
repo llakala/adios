@@ -114,8 +114,11 @@ let
   toPretty = import ./toPretty.nix { indent = "    "; };
 
   notOfType =
+    # name of the expected type
+    name:
     # value that failed the type check
-    name: v: "value '${toPretty v}' is not of type '${name}'";
+    v:
+    "value '${toPretty v}' is not of type '${name}'";
 
   toErrorMessage = name: explain: if explain == null then notOfType name else explain;
 
