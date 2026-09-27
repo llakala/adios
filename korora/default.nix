@@ -620,7 +620,6 @@ fix (self: {
     name:
     # Attribute set of type definitions.
     types:
-    assert isAttrs types;
     let
       names = attrNames types;
 
@@ -631,10 +630,6 @@ fix (self: {
           verify ? null,
           explain ? null,
         }:
-        assert isBool total;
-        assert isBool unknown;
-        assert verify != null -> isFunction verify;
-        assert explain != null -> isFunction explain;
         let
           verifiers =
             map (
@@ -660,7 +655,7 @@ fix (self: {
         in
         self.new {
           name = "struct<${name}>";
-          verify = v: isAttrs v && all (verifier: verifier v == true) verifiers;
+          verify = v: isAttrs v && all (verifier: verifier v) verifiers;
           explain =
             v:
             "in struct '${name}': "
