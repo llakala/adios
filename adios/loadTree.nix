@@ -12,6 +12,7 @@ let
     functionArgs
     intersectAttrs
     isAttrs
+    isFunction
     isString
     listToAttrs
     mapAttrs
@@ -28,6 +29,17 @@ let
 
   # Call a function with only its supported attributes.
   callFunction = fn: attrs: fn (intersectAttrs (functionArgs fn) attrs);
+
+  # variant of the callFunction algorithm.
+  # for promise.map to work, the new promise needs to declare the same
+  # functionArgs as the old promise
+  callPromise =
+    promise:
+    if promise.__adiosPromise or false then
+      args:
+      promise.resolve (intersectAttrs (promise.__promiseArgs or (functionArgs promise.resolve)) args)
+    else
+      _: promise;
 
   printList = list: "[${concatStringsSep ", " list}]";
 
@@ -73,7 +85,7 @@ let
       ) self.assertions;
     args;
   runAssertionsAndCall =
-    self: args:
+    self: getResult: args:
     assert
       !self ? assertions
       || all (
@@ -83,7 +95,7 @@ let
           throw (callFunction assertion.explain args)
         )
       ) self.assertions;
-    callFunction self.impl args;
+    getResult args;
 
   # Merge lhs & rhs recursing into suboptions
   mergeOptionsUnchecked =
@@ -202,12 +214,18 @@ let
         # if a module mutates itself and sets something in the impl stage,
         # it needs access to the newest version of args, not the cached one
         args' = if self.path == mutatorPath then args else resolution.args;
+        mutations = resolution.mutations.${self.path};
       in
-      if resolution ? mutations.${self.path}.${name} then
+      if mutations ? ${name} then
         [
           (addErrorContext
             "${errorContext} '${self.path}': in mutator '${resolution.path}' of option '${name}'"
-            (check (callFunction resolution.mutations.${self.path}.${name} args'))
+            (
+              check (
+                # TODO: deprecate the function form, warn temporarily
+                (if isFunction mutations.${name} then callFunction else callPromise) mutations.${name} args'
+              )
+            )
           )
         ]
       else
@@ -305,7 +323,7 @@ let
           [
             {
               inherit name;
-              value = addErrorContext errorMessage (option.type.check option.default);
+              value = addErrorContext errorMessage (option.type.check (callPromise option.default args));
             }
           ]
         # Computed default value
@@ -332,7 +350,13 @@ let
       currentFunctor = {
         ${if self ? __functor then "__functor" else null} = self.__functor;
       };
-      result = callFunction def.impl self.args;
+      getResult =
+        if def ? result then
+          assert !def ? impl;
+          callPromise def.result
+        else
+          callFunction def.impl;
+      cachedResult = getResult self.args;
 
       # compute args before running assertions to prevent infrec
       # self.args stores the args after assertions
@@ -380,16 +404,17 @@ let
         ${if def ? impl then "impl" else null} = addErrorContext "${errorPrefix}: in attribute 'impl'" (
           checkImpl def.impl
         );
+        ${if def ? result then "result" else null} = def.result;
         ${if def ? assertions then "assertions" else null} =
           addErrorContext "${errorPrefix}: in attribute 'assertions'" (checkAssertions def.assertions);
 
         args = runAssertionsAndDefine self args';
 
-        ${if def ? impl then "__functor" else null} =
+        ${if def ? result || def ? impl then "__functor" else null} =
           _: implParams:
           if implParams == { } then
             # Reuse existing args if impl isn't being passed anything new
-            result
+            cachedResult
           else
             let
               # recompute args fixpoint with the passed params
@@ -412,7 +437,7 @@ let
                   // currentFunctor;
               };
             in
-            runAssertionsAndCall self args;
+            runAssertionsAndCall self getResult args;
       };
     in
     assert isAttrs def || messages.mkBadDefError self.path def;

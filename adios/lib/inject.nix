@@ -2,54 +2,52 @@ let
   inherit (builtins)
     elemAt
     foldl'
+    functionArgs
     head
     isAttrs
-    isFunction
     length
     zipAttrsWith
     ;
 
-  injectModule =
-    canCall:
-    zipAttrsWith (
-      name: values:
-      if length values == 1 then
-        head values
+  recurse = zipAttrsWith (
+    name: values:
+    if length values == 1 then
+      # only one side, stop recursing
+      head values
+    else
+      let
+        lhs = head values;
+        rhs = elemAt values 1;
+      in
+      if !isAttrs rhs then
+        # can't recurse, not awaiting. rhs wins
+        rhs
       else
-        let
-          lhs = head values;
-          rhsOld = elemAt values 1;
-          # If current attribute is a module, allow rhs to read the old version
-          # when determining its injection
-          rhs = if canCall == true && isFunction rhsOld then rhsOld lhs else rhsOld;
-        in
-        if !isAttrs lhs || !isAttrs rhs then
-          # TODO: consider throwing in the future if one side is a different
-          # type than the other. alternatively, prevent recursing into values
-          # like modules.options.foo.default
-          rhs
+      if rhs.__adiosAwaiting or false then
+        # awaiting a previous value to inject into it
+        if (lhs.__adiosPromise or false) then
+          # left side is a promise, create a new promise that calls the old one
+          {
+            __adiosPromise = true;
+            # preserve the same functionArgs as the original
+            __promiseArgs = lhs.__promiseArgs or (functionArgs lhs.resolve);
+            resolve = args: rhs.resolve (lhs.resolve args);
+          }
         else
-          injectModule (
-            if canCall == null || canCall == false && name != "modules" then
-              # We're either:
-              # - about to enter another module field like `options` or `inputs`
-              # - have already done that, and should continue to be null
-              null
-            else
-              # we should toggle the state of inModule. We're either:
-              # - Currently in some module foo (foo may be root), and are about to
-              # enter `foo.modules`. allow calling modules with their old versions.
-              # - Currently in `foo.modules`, and about to enter `foo.modules.bar`.
-              # Don't allow calling modules this time (but possibly in two
-              # iterations)
-              !canCall
-          ) [ lhs rhs ]
-    );
+          # left side wasn't a promise, pass the prev value directly
+          rhs.resolve lhs
+      else if !isAttrs lhs then
+        # left isn't an attrset, rhs wins
+        rhs
+      else
+        # lhs and rhs are both non-promise attrsets
+        recurse [ lhs rhs ]
+  );
 in
 foldl' (
   a: b:
-  if a == { } then
+  if a == {} then
     b
   else
-    injectModule true [ a b ]
-) { }
+    recurse [ a b ]
+) {}

@@ -1,5 +1,45 @@
 Any new features or breaking changes will be listed here.
 
+# Promises
+
+Adios now uses "promises" to express that a value needs the current module's args (think `{ inputs, options }:`) to be
+computed.
+
+Here's an example of how promises can be used:
+
+```nix
+{ types, promise, ... }:
+{
+  options = {
+    option-1 = {
+      type = types.int;
+      default = 5;
+    };
+    option-2 = {
+      type = types.int;
+      default = promise ({ options }: options.option-a + 1);
+    };
+  };
+
+  mutations = {
+    "/foo".bar = promise ({ options }: [ options.option-1 ]);
+  };
+
+  result = promise ({ options }: options.option-2 - options.option-1);
+}
+```
+The `promise` function returns a special sentinel data structure that tells Adios "I need the module's args. Once you
+pass them, I'll return this option's value". If you've used `defaultFunc` / `impl`, this may be familar. However, this
+new model allows for much more powerful injections with `promise.map` (see the [docs](./doc/src/lib/inject/index.md)).
+
+Adios supports using promises with:
+- `options.$option.default`
+- the new top-level `result` attribute (disjoint with `impl`)
+- `mutations.$module.$option`
+
+In the future, `defaultFunc`, `impl`, and non-promise `mutations.$module.option` will be deprecated. Now is a good
+time to port your modules to use the promise APIs instead.
+
 # Improved formatting of type errors
 
 Type errors from Korora (our internal type library) now put the name of the type _after_ the value that failed to

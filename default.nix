@@ -5,7 +5,6 @@ let
     korora = import ./korora;
   };
 
-  # Helper functions for users, accessed through `adios.lib`
   lib = {
     importModules = import ./adios/lib/importModules.nix { inherit adios; };
     inject = import ./adios/lib/inject.nix;
@@ -31,6 +30,7 @@ let
 
   adios = {
     inherit types lib;
+    promise = import ./adios/promise.nix;
     __functor =
       _: rootDef:
       {

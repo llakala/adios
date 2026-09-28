@@ -9,7 +9,7 @@ let
     ;
 
   adios = import ../.;
-  inherit (adios) types;
+  inherit (adios) types promise;
 
   isTest = name: substring 0 4 name == "test";
   ignoredTestAttributes = [
@@ -399,64 +399,50 @@ mapAttrs testModules {
       expected = true;
     };
 
-    testFunctionForm = {
-      modules = adios.lib.inject [
+    testPromiseMappingNonPromise = {
+      module = adios.lib.inject [
         {
-          foo = {
-            options.test = {
-              type = types.int;
-              default = 10;
-            };
-            impl = { options }: options.test;
+          options.test = {
+            type = types.int;
+            default = 10;
           };
+          impl = { options }: options.test;
         }
         {
-          foo = old: {
-            options.test.default = old.options.test.default + 1;
-          };
+          options.test.default = promise.map (prev: prev + 1);
         }
       ];
-      apply = tree: tree.modules.foo { };
       expected = 11;
     };
 
-    testNestedFunctionForm = {
-      modules = adios.lib.inject [
+    testPromiseMappingPromise = {
+      module = adios.lib.inject [
         {
-          foo.modules.bar = {
-            options.test = {
-              type = types.int;
-              default = 10;
-            };
-            impl = { options }: options.test;
+          options.hello = {
+            type = types.string;
+            default = "hello";
           };
+          result = promise ({ options }: options.hello);
         }
         {
-          foo.modules.bar = old: {
-            options.test.default = old.options.test.default * 2;
-          };
+          result = promise.map (prev: prev + " world");
         }
       ];
-      apply = tree: tree.modules.foo.modules.bar { };
-      expected = 20;
+      expected = "hello world";
     };
-
-    # for the function form to work, the function must be under
-    # /\w*(.modules.\w*)*/.
-    testFailingFunctionForm = {
-      expr =
-        isFunction
-          (adios.lib.inject [
-            {
-              foo.meta.modules.bar = {
-                baz = 1;
-              };
-            }
-            {
-              foo.meta.modules.bar = old: { baz = old.baz * 2; };
-            }
-          ]).foo.meta.modules.bar;
-      expected = true;
+    testTriplePromise = {
+      module = adios.lib.inject [
+        {
+          result = promise (_: 2);
+        }
+        {
+          result = promise.map (prev: prev * 3);
+        }
+        {
+          result = promise.map (prev: prev + 1);
+        }
+      ];
+      expected = 7;
     };
   };
 
