@@ -105,8 +105,6 @@ let
     ;
   warn = builtins.warn or builtins.trace;
 
-  optionalElem = cond: e: if cond then [ e ] else [ ];
-
   joinKeys = list: concatStringsSep ", " (map (e: "'${e}'") list);
 
   toPretty = import ./toPretty.nix { indent = "    "; };
@@ -640,15 +638,23 @@ fix (self: {
               else
                 v: v ? ${attr} && verify v.${attr}
             ) names
-            ++ optionalElem (!unknown) (v: removeAttrs v names == { })
-            ++ optionalElem (verify != null) (
-              v:
-              let
-                result = verify v;
-              in
-              # most users don't interact with types.new at all, so this is the
-              # most likely place to encounter a deprecated verify -> string
-              if isString result then seq stringVerifyWarning false else result
+            ++ (if unknown then [ ] else [ (v: removeAttrs v names == { }) ])
+            ++ (
+              if verify == null then
+                [ ]
+              else
+                [
+                  (
+                    v:
+
+                    let
+                      result = verify v;
+                    in
+                    # most users don't interact with types.new at all, so this is the
+                    # most likely place to encounter a deprecated verify -> string
+                    if isString result then seq stringVerifyWarning false else result
+                  )
+                ]
             );
         in
         self.new {
