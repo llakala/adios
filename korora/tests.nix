@@ -417,7 +417,8 @@ lib.fix (
             };
 
         testStructNonTotal = testStruct.override { total = false; };
-        testStructWithUnknown = testStruct.override { unknown = true; };
+        testStructUnknown = testStruct.override { unknown = true; };
+        testStructNonTotalUnknown = testStruct2.override { total = false; unknown = true; };
       in
       {
         testValid = {
@@ -427,12 +428,20 @@ lib.fix (
           expected = null;
         };
 
+        testUnknownDisallowed = {
+          expr = testStruct.inspect {
+            foo = "bar";
+            bar = "foo";
+          };
+          expected = "in struct 'test1': keys ['bar'] are unrecognized, expected keys are ['foo']";
+        };
+
         testMissingAttr = {
           expr = testStruct.inspect { };
           expected = "in struct 'test1': missing member 'foo'";
         };
 
-        testNonTotal = {
+        testNonTotalAllowed = {
           expr = testStructNonTotal.inspect { };
           expected = null;
         };
@@ -445,18 +454,17 @@ lib.fix (
           expected = "in struct 'test2': VERBOTEN";
         };
 
-        testUnknownAttrNotAllowed = {
-          expr = testStruct.inspect {
+        testUnknownAllowed = {
+          expr = testStructUnknown.inspect {
             foo = "bar";
             bar = "foo";
           };
-          expected = "in struct 'test1': keys ['bar'] are unrecognized, expected keys are ['foo']";
+          expected = null;
         };
 
-        testUnknownAttr = {
-          expr = testStructWithUnknown.inspect {
-            foo = "bar";
-            bar = "foo";
+        testUnknownNonTotal = {
+          expr = testStructNonTotalUnknown.inspect {
+            bar = null;
           };
           expected = null;
         };

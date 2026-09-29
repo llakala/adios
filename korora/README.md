@@ -327,6 +327,8 @@ struct<name, members...>
 ```nix
 korora.struct "myStruct" {
   foo = types.string;
+  bar = types.int;
+  baz = types.optionalAttr types.bool;
 }
 ```
 
@@ -334,7 +336,9 @@ korora.struct "myStruct" {
 
 #### Totality
 
-By default, all attribute names must be present in a struct. It is possible to override this by specifying _totality_. Here is how to do this:
+By default, all attribute names must be present in a struct (modulo
+`optionalAttr`). It is possible to override this by specifying _totality_.
+
 ```nix
 (korora.struct "myStruct" {
   foo = types.string;
@@ -384,17 +388,37 @@ Custom struct verification functions can be added as such:
 };
 ```
 
+#### Tips
+
+Setting `total = false` is equivalent to using `optionalAttr` for every
+type. However, the algorithm that's used is different.
+
+When `total = true` (the default), structs iterate through every member,
+including optional members. If a member wasn't specified, but was optional,
+they simply skip the current iteration.
+
+When `total = false`, structs instead iterate through every attribute that's
+actually specified. This improves performance when most of the attributes
+are specified rarely.
+
+If your struct requires some attributes to be specified, but most optional
+attributes are never set, it may be worth it to set `total = false`,
+and check for the required elements yourself in a custom `verify` function.
+
+For example:
+```nix
+(types.struct "testStruct3" {
+  requiredAttribute = types.int;
+  optionalA = types.int;
+  optionalB = types.string;
+  optionalC = types.functoin;
+}).override {
+  total = false;
+  verify = v: v ? requiredAttribute;
+}
+```
+
 #### Function signature
-
-`name`
-
-: Name of struct type as a string
-
-
-`types`
-
-: Attribute set of type definitions.
-
 
 ## `types.optionalAttr`
 

@@ -4,6 +4,7 @@ let
   inherit (builtins) isFunction isString;
   inherit (korora)
     any
+    attrs
     attrsOf
     either
     function
@@ -24,24 +25,30 @@ let
     normalOption =
       (struct "option" {
         inherit type;
-        description = optionalAttr string;
-        default = optionalAttr any;
-        defaultFunc = optionalAttr function;
-        mutatorType = optionalAttr type; # TODO: remove
-        mergeFunc = optionalAttr function;
-        mutators = optionalAttr (listOf string);
-        example = optionalAttr any;
+        description = string;
+        default = any;
+        defaultFunc = function;
+        mutatorType = type; # TODO: remove
+        mergeFunc = function;
+        mutators = listOf string;
+        example = any;
       }).override
         {
+          # since most attributes are rarely specified, we opt into the lazier
+          # algorithm, and manually verify that `type` is specified
+          total = false;
           verify =
             option:
+            option ? type
             # at least one of these must be false
-            (!option ? default || !option ? defaultFunc)
+            && (!option ? default || !option ? defaultFunc)
             # if mutators are set, then these must be
             && (!option ? mutators || option ? mergeFunc);
           explain =
             option:
-            if option ? default && option ? defaultFunc then
+            if !option ? type then
+              "missing member 'type'"
+            else if option ? default && option ? defaultFunc then
               "'default' & 'defaultFunc' are mutually exclusive"
             else
               "if 'mutators' are specified, 'mergeFunc' must be as well";
