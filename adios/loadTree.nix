@@ -332,6 +332,9 @@ let
     fetchInput: path: def:
     let
       errorPrefix = "in definition of '${self.path}'";
+      currentFunctor = {
+        ${if self ? __functor then "__functor" else null} = self.__functor;
+      };
       result = callFunction def.impl self.args;
 
       # compute args before running assertions to prevent infrec
@@ -358,9 +361,7 @@ let
           }
           # If the current module has an impl, include it in the computed args,
           # so the module can be called inside the tree
-          // {
-            ${if def ? impl then "__functor" else null} = self.__functor;
-          };
+          // currentFunctor;
       };
 
       self = {
@@ -412,9 +413,7 @@ let
                   }
                   # Current module necessarily defines a functor - include
                   # it in the computed args
-                  // {
-                    inherit (self) __functor;
-                  };
+                  // currentFunctor;
               };
             in
             runAssertionsAndCall self args;
