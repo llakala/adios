@@ -101,6 +101,7 @@ let
     isPath
     isString
     length
+    mapAttrs
     seq
     ;
   warn = builtins.warn or builtins.trace;
@@ -143,6 +144,30 @@ let
     in
     recurse 0;
 
+  # Find the first element in the list where the given function returns a string
+  # (representing an error).
+  # If the validate function passes for all elements, returns null
+  validateAll =
+    # returns null/string depending on whether typecheck passed
+    validate:
+    # list of elemenets to attempt validation on
+    list:
+    let
+      len = length list;
+      recurse =
+        i:
+        let
+          result = validate (elemAt list i);
+        in
+        if i == len then
+          null
+        else if result == null then
+          recurse (i + 1)
+        else
+          result;
+    in
+    recurse 0;
+
   # Find the first function that fails on the given value.
   explainFirstFailingFunction =
     # each element returns true/false
@@ -166,15 +191,6 @@ let
   nullWarning = warn ''
     At least one of your Adios typechecks returned null.
     On success, typechecks should now return a string.
-
-    See the lladios changelog for rationale and a migration guide:
-    https://github.com/llakala/lladios/blob/main/CHANGELOG.md#new-typedef-function
-  '' null;
-  stringVerifyWarning = warn ''
-    At least one of your structs defined a custom `verify` function which
-    returned a string. `verify` functions are now only permitted to return
-    true/false. An `explain` function can be used to provide a custom error
-    message.
 
     See the lladios changelog for rationale and a migration guide:
     https://github.com/llakala/lladios/blob/main/CHANGELOG.md#new-typedef-function
@@ -552,6 +568,8 @@ fix (self: {
     ```nix
     korora.struct "myStruct" {
       foo = types.string;
+      bar = types.int;
+      baz = types.optionalAttr types.bool;
     }
     ```
 
@@ -559,7 +577,9 @@ fix (self: {
 
     #### Totality
 
-    By default, all attribute names must be present in a struct. It is possible to override this by specifying _totality_. Here is how to do this:
+    By default, all attribute names must be present in a struct (modulo
+    `optionalAttr`). It is possible to override this by specifying _totality_.
+
     ```nix
     (korora.struct "myStruct" {
       foo = types.string;
@@ -609,16 +629,85 @@ fix (self: {
     };
     ```
 
+    #### Tips
+
+    Setting `total = false` is equivalent to using `optionalAttr` for every
+    type. However, the algorithm that's used is different.
+
+    When `total = true` (the default), structs iterate through every member,
+    including optional members. If a member wasn't specified, but was optional,
+    they simply skip the current iteration.
+
+    When `total = false`, structs instead iterate through every attribute that's
+    actually specified. This improves performance when most of the attributes
+    are specified rarely.
+
+    If your struct requires some attributes to be specified, but most optional
+    attributes are never set, it may be worth it to set `total = false`,
+    and check for the required elements yourself in a custom `verify` function.
+
+    For example:
+    ```nix
+    (types.struct "testStruct3" {
+      requiredAttribute = types.int;
+      optionalA = types.int;
+      optionalB = types.string;
+      optionalC = types.functoin;
+    }).override {
+      total = false;
+      verify = v: v ? requiredAttribute;
+    }
+    ```
+
     #### Function signature
   */
   struct =
+    let
+      verifyTotalStruct =
+        types: total: unknown: verify:
+        let
+          names = attrNames types;
+          verifiers =
+            map (
+              name:
+              let
+                inherit (types.${name}) verify;
+              in
+              if types.${name}.__optional or false then
+                v: !v ? ${name} || verify v.${name}
+              else
+                v: v ? ${name} && verify v.${name}
+            ) names
+            ++ (if unknown then [ ] else [ (v: removeAttrs v names == { }) ])
+            ++ (if verify == null then [ ] else [ verify ]);
+        in
+        v: isAttrs v && all (verifier: verifier v) verifiers;
+      verifyNonTotalStruct =
+        types: total: unknown: verify:
+        let
+          noCustomVerify = verify == null;
+          verifiers = mapAttrs (_: type: type.verify) types;
+        in
+        if unknown then
+          v:
+          isAttrs v
+          # if attribute is a member, it passes
+          && all (name: verifiers.${name} or (_: true) v.${name}) (attrNames v)
+          # custom verifier passes
+          && (noCustomVerify || verify v)
+        else
+          v:
+          isAttrs v
+          # all attributes are members and pass
+          && all (name: verifiers.${name} or (_: false) v.${name}) (attrNames v)
+          # custom verifier passes
+          && (noCustomVerify || verify v);
+    in
     # Name of struct type as a string
     name:
     # Attribute set of type definitions.
     types:
     let
-      names = attrNames types;
-
       mkStruct' =
         {
           total ? true,
@@ -626,40 +715,9 @@ fix (self: {
           verify ? null,
           explain ? null,
         }:
-        let
-          verifiers =
-            map (
-              attr:
-              let
-                inherit (types.${attr}) verify;
-              in
-              if types.${attr}.__optional or (!total) then
-                v: !v ? ${attr} || verify v.${attr}
-              else
-                v: v ? ${attr} && verify v.${attr}
-            ) names
-            ++ (if unknown then [ ] else [ (v: removeAttrs v names == { }) ])
-            ++ (
-              if verify == null then
-                [ ]
-              else
-                [
-                  (
-                    v:
-
-                    let
-                      result = verify v;
-                    in
-                    # most users don't interact with types.new at all, so this is the
-                    # most likely place to encounter a deprecated verify -> string
-                    if isString result then seq stringVerifyWarning false else result
-                  )
-                ]
-            );
-        in
         self.new {
           name = "struct<${name}>";
-          verify = v: isAttrs v && all (verifier: verifier v) verifiers;
+          verify = (if total then verifyTotalStruct else verifyNonTotalStruct) types total unknown verify;
           explain =
             v:
             "in struct '${name}': "
@@ -668,37 +726,23 @@ fix (self: {
                 notOfType "attrs" v
               else
                 let
-                  explanations =
-                    map (
-                      attr:
-                      let
-                        type = types.${attr};
-                      in
-                      if type.__optional or (!total) then
-                        "in member '${attr}': ${type.explain v.${attr}}"
-                      else if !v ? ${attr} then
-                        "missing member '${attr}'"
-                      else
-                        "in member '${attr}': ${type.explain v.${attr}}"
-                    ) names
-                    ++ (
-                      if unknown then
-                        [ ]
-                      else
-                        [
-                          "keys [${joinKeys (attrNames (removeAttrs v names))}] are unrecognized, expected keys are [${joinKeys names}]"
-                        ]
-                    )
-                    ++ (
-                      if verify == null then
-                        [ ]
-                      else if explain == null then
-                        [ "custom verification function failed on value '${toPretty v}'" ]
-                      else
-                        [ (explain v) ]
-                    );
+                  names = attrNames types;
+                  explanation = validateAll (
+                    name:
+                    if !v ? ${name} then
+                      if !total || (types.${name}.__optional or false) then null else "missing member '${name}'"
+                    else if !types.${name}.verify v.${name} then
+                      "in member '${name}': ${types.${name}.explain v.${name}}"
+                    else
+                      null
+                  ) names;
                 in
-                explainFirstFailingFunction verifiers explanations v
+                if explanation != null then
+                  explanation
+                else if !unknown && (removeAttrs v names != { }) then
+                  "keys [${joinKeys (attrNames (removeAttrs v names))}] are unrecognized, expected keys are [${joinKeys names}]"
+                else
+                  explain v
             );
         }
         // {
