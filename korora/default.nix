@@ -105,8 +105,6 @@ let
     ;
   warn = builtins.warn or builtins.trace;
 
-  isDerivation = value: value.type or null == "derivation";
-
   optionalElem = cond: e: if cond then [ e ] else [ ];
 
   joinKeys = list: concatStringsSep ", " (map (e: "'${e}'") list);
@@ -366,7 +364,7 @@ fix (self: {
   */
   pathLike = self.new {
     name = "pathLike";
-    verify = v: isPath v || isDerivation v || isString v;
+    verify = v: isPath v || v.type or null == "derivation" || isString v;
   };
 
   /*
@@ -374,7 +372,7 @@ fix (self: {
   */
   derivation = self.new {
     name = "derivation";
-    verify = isDerivation;
+    verify = v: v.type or null == "derivation";
   };
 
   # Polymorphic types
