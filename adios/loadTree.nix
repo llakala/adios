@@ -12,6 +12,7 @@ let
     functionArgs
     intersectAttrs
     isAttrs
+    isFunction
     isString
     listToAttrs
     mapAttrs
@@ -26,8 +27,27 @@ let
 
   optionals = cond: list: if cond then list else [ ];
 
-  # Call a function with only its supported attributes.
-  callFunction = fn: attrs: fn (intersectAttrs (functionArgs fn) attrs);
+  # call a function with only its supported attributes
+  callFunctionWith = args: fn: fn (intersectAttrs (functionArgs fn) args);
+  callCachedFunction =
+    fn:
+    let
+      intersectFargs = intersectAttrs (functionArgs fn);
+    in
+    args: fn (intersectFargs args);
+
+  # variant of the callFunction algorithm.
+  # for promise.map to work, the new promise needs to declare the same
+  # functionArgs as the old promise
+  callPromiseWith =
+    args: promise:
+    promise.resolve (intersectAttrs (promise.__promiseArgs or (functionArgs promise.resolve)) args);
+  callCachedPromise =
+    promise:
+    let
+      intersectFargs = intersectAttrs (promise.__promiseArgs or (functionArgs promise.resolve));
+    in
+    args: promise.resolve (intersectFargs args);
 
   printList = list: "[${concatStringsSep ", " list}]";
 
@@ -60,30 +80,18 @@ let
   # `args.options`. This means even if only `args.inputs` are accessed,
   # assertions still run. This is technically less lazy than it could be, but
   # changing it would be a very minor performance regression. Consider fixing.
-  runAssertionsAndDefine =
-    self: args:
-    assert
-      !self ? assertions
-      || all (
-        assertion:
-        callFunction assertion.verify args
-        || addErrorContext "in module '${self.path}': while verifying 'assertions':" (
-          throw (callFunction assertion.explain args)
-        )
-      ) self.assertions;
-    args;
-  runAssertionsAndCall =
-    self: args:
-    assert
-      !self ? assertions
-      || all (
-        assertion:
-        callFunction assertion.verify args
-        || addErrorContext "while calling module '${self.path}': while verifying 'assertions':" (
-          throw (callFunction assertion.explain args)
-        )
-      ) self.assertions;
-    callFunction self.impl args;
+  runAssertions' =
+    errorPrefix: callFunction: self: v:
+    assert all (
+      assertion:
+      callFunction assertion.verify
+      || addErrorContext "${errorPrefix} module '${self.path}': while verifying 'assertions':" (
+        throw (callFunction assertion.explain)
+      )
+    ) self.assertions;
+    v;
+  runAssertionsAndDefine = runAssertions' "in";
+  runAssertionsAndCall = runAssertions' "while calling";
 
   # Merge lhs & rhs recursing into suboptions
   mergeOptionsUnchecked =
@@ -174,16 +182,16 @@ let
     if functionArgs inputFetcher == cachedParentFargs then
       (inputFetcher parentArgs).__functor
     else
-      (callFunction inputFetcher {
+      (callFunctionWith {
         inherit root parent;
         self = recurse self;
-      }).__functor;
+      } inputFetcher).__functor;
 
   computeMutators =
     {
       self,
       args,
-      errorContext,
+      errorPrefix,
       name,
       option,
       params,
@@ -202,12 +210,23 @@ let
         # if a module mutates itself and sets something in the impl stage,
         # it needs access to the newest version of args, not the cached one
         args' = if self.path == mutatorPath then args else resolution.args;
+        mutations = resolution.mutations.${self.path};
       in
-      if resolution ? mutations.${self.path}.${name} then
+      if mutations ? ${name} then
         [
           (addErrorContext
-            "${errorContext} '${self.path}': in mutator '${resolution.path}' of option '${name}'"
-            (check (callFunction resolution.mutations.${self.path}.${name} args'))
+            "${errorPrefix} '${self.path}': in mutator '${resolution.path}' of option '${name}'"
+            (
+              check (
+                # TODO: deprecate the function form, warn temporarily
+                if isFunction mutations.${name} then
+                  callFunctionWith args' mutations.${name}
+                else if mutations.${name}.__adiosPromise or false then
+                  callPromiseWith args' mutations.${name}
+                else
+                  mutations.${name}
+              )
+            )
           )
         ]
       else
@@ -220,7 +239,7 @@ let
     ++ optionals (params ? ${name}) [
       # TODO: improve this error message to make it clearer what "outside
       # mutator" is
-      (addErrorContext "${errorContext} '${self.path}': in outside mutator of option '${name}'" (
+      (addErrorContext "${errorPrefix} '${self.path}': in outside mutator of option '${name}'" (
         check params.${name}
       ))
     ];
@@ -235,9 +254,13 @@ let
       # Defined options
       options ? self.options,
       # why the options had to be computed
-      errorContext ? "in",
+      errorPrefix ? "in",
       # parameters given explicitly in eval/impl stage
       params ? { },
+      # calls the given function (pre-applied with `args`)
+      callFunction,
+      # calls the given promise (pre-applied with `args`)
+      callPromise,
     }:
     let
       names = attrNames options;
@@ -245,13 +268,13 @@ let
     assert
       params == { }
       || removeAttrs params names == { }
-      || messages.mkMissingParamsError self errorContext options params;
+      || messages.mkMissingParamsError self errorPrefix options params;
     listToAttrs (
       concatMap (
         name:
         let
           option = options.${name};
-          errorMessage = "${errorContext} '${self.path}': in option '${name}'";
+          errorMessage = "${errorPrefix} '${self.path}': in option '${name}'";
         in
         # Gross hack - if you want to always go through the mergeFunc,
         # set `mutators = []`.
@@ -261,21 +284,21 @@ let
               inherit name;
               value = addErrorContext errorMessage (
                 option.type.check (
-                  callFunction option.mergeFunc (
+                  callFunctionWith (
                     args
                     // {
                       mutators = computeMutators {
                         inherit
-                          self
                           args
-                          errorContext
+                          errorPrefix
                           name
                           option
                           params
+                          self
                           ;
                       };
                     }
-                  )
+                  ) option.mergeFunc
                 )
               );
             }
@@ -285,7 +308,13 @@ let
         else if option ? options then
           let
             value = computeOptions {
-              inherit self args errorContext;
+              inherit
+                args
+                callFunction
+                callPromise
+                errorPrefix
+                self
+                ;
               inherit (option) options;
               params = params.${name} or { };
             };
@@ -305,16 +334,19 @@ let
           [
             {
               inherit name;
-              value = addErrorContext errorMessage (option.type.check option.default);
+              value = addErrorContext errorMessage (
+                option.type.check (
+                  if option.default.__adiosPromise or false then callPromise option.default else option.default
+                )
+              );
             }
           ]
         # Computed default value
         else if option ? defaultFunc then
           [
             {
-              # Compute value with args fixpoint
               inherit name;
-              value = addErrorContext errorMessage (option.type.check (callFunction option.defaultFunc args));
+              value = addErrorContext errorMessage (option.type.check (callFunction option.defaultFunc));
             }
           ]
         else
@@ -332,11 +364,23 @@ let
       currentFunctor = {
         ${if self ? __functor then "__functor" else null} = self.__functor;
       };
-      result = callFunction def.impl self.args;
+
+      # we call a bunch of functions with the module's args, and re-call the
+      # result with lots of different args. partially apply for both cases!
+      callFunction = callFunctionWith args;
+      callResultWith =
+        if def ? result then
+          assert !def ? impl;
+          if def.result.__adiosPromise or false then callCachedPromise def.result else _: def.result
+        else
+          callCachedFunction def.impl;
+
+      # cache the equivalent of calling `module {}`
+      # uses self.args to also run assertions
+      cachedResult = callResultWith self.args;
 
       # compute args before running assertions to prevent infrec
-      # self.args stores the args after assertions
-      args' = {
+      args = {
         inputs = mapAttrs (
           _: inputData:
           (
@@ -352,8 +396,8 @@ let
         ) self.inputs;
         options =
           computeOptions {
-            inherit self;
-            args = args';
+            inherit self callFunction args;
+            callPromise = callPromiseWith args;
             ${if evalParams ? ${self.path} then "params" else null} = evalParams.${self.path};
           }
           # If the current module has an impl, include it in the computed args,
@@ -380,27 +424,31 @@ let
         ${if def ? impl then "impl" else null} = addErrorContext "${errorPrefix}: in attribute 'impl'" (
           checkImpl def.impl
         );
-        ${if def ? assertions then "assertions" else null} =
+        ${if def ? result then "result" else null} = def.result;
+        ${if def ? assertions && def.assertions != [ ] then "assertions" else null} =
           addErrorContext "${errorPrefix}: in attribute 'assertions'" (checkAssertions def.assertions);
 
-        args = runAssertionsAndDefine self args';
+        args = if !self ? assertions then args else runAssertionsAndDefine callFunction self args;
 
-        ${if def ? impl then "__functor" else null} =
+        ${if def ? result || def ? impl then "__functor" else null} =
           _: implParams:
           if implParams == { } then
             # Reuse existing args if impl isn't being passed anything new
-            result
+            cachedResult
           else
             let
+              callFunction = callFunctionWith recomputedArgs;
               # recompute args fixpoint with the passed params
-              args = {
-                # inherit args', not self.args, so assertions are only computed
+              recomputedArgs = {
+                # inherit args, not self.args, so assertions are only computed
                 # once
-                inherit (args') inputs;
+                inherit (args) inputs;
                 options =
                   computeOptions {
-                    inherit self args;
-                    errorContext = "while calling";
+                    inherit self callFunction;
+                    args = recomputedArgs;
+                    callPromise = callPromiseWith recomputedArgs;
+                    errorPrefix = "while calling";
                     params =
                       if evalParams ? ${self.path} then
                         mergeOptionsUnchecked self.options evalParams.${self.path} implParams
@@ -412,7 +460,10 @@ let
                   // currentFunctor;
               };
             in
-            runAssertionsAndCall self args;
+            if !self ? assertions then
+              callResultWith recomputedArgs
+            else
+              runAssertionsAndCall callFunction self (callResultWith recomputedArgs);
       };
     in
     assert isAttrs def || messages.mkBadDefError self.path def;

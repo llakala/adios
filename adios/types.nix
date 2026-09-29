@@ -100,7 +100,7 @@ let
               "either 'path' or 'from' must be specified for a given input";
         };
 
-    mutation = attrsOf function;
+    mutation = attrs;
 
     lib = attrsOf (either function (rename "sublib" modules.lib));
 

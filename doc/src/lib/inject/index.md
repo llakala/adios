@@ -67,13 +67,13 @@ adios.lib.inject [
 { unchanged-value = true; nested.overriden-value = true; }
 ```
 
-## Simple example
+## Example
 
 Here's an example of injecting into a basic Adios module:
 
 ```nix
 let
-  module = {
+  base = {
     options = {
       age = {
         type = types.int;
@@ -81,7 +81,7 @@ let
       };
       age-someday = {
         type = types.int;
-        defaultFunc = { options }: options.age + 1;
+        default = promise ({ options }: options.age + 1);
       };
     };
 
@@ -92,96 +92,47 @@ let
   };
 
 
-  injections = {
+  injection = {
     options = {
       age.default = 35;
       age-someday.type = types.float;
-      age-someday.defaultFunc = { options }: options.age + 0.1;
+      age-someday.default = promise ({ options }: options.age + 0.1);
     };
   };
 
-  root = {
-    modules = adios.lib.inject [
-      { age-module = module; }
-      { age-module = injections; }
-    ];
-  };
-  tree = adios root {};
+  module = adios.lib.inject [ base injection ];
+  tree = adios module {};
 in
-(tree.modules.age-module {}) == ''
+tree {} == ''
   You are 35 years old.
   Someday, you will be 35.1 years old.
 ''
 ```
 
-## Advanced example
+## Using promises
 
-Injections also support an advanced form, where they take the old version of the module as a parameter. With the module
-from the simple example, that might look like:
+`promise.map` can be used inside injections to "await" the old version of an attribute. Here's an alternative injection
+for the above module that makes use of it:
 
 ```nix
 let
-  module = {
-    options = {
-      age = {
-        type = types.int;
-        default = 10;
-      };
-      age-someday = {
-        type = types.int;
-        defaultFunc = { options }: options.age + 1;
-      };
-    };
-
-    impl = { options }: ''
-      You are ${toString options.age} years old.
-      Someday, you will be ${toString options.age-someday} years old.
-    '';
-  };
-
-  newModule = old: {
-    # default of 10 multiplied by 2
-    options.foo.default = old.options.foo.default * 2;
-  };
-
   injection = {
-    modules = adios.lib.inject [
-      { age-module = module; }
-      { age-module = injection; }
-    ];
+    options.age.default = promise.map (prev: prev * 2);
+    options.age-someday.type = types.string;
+    options.age-someday.default = promise.map (prev: "ABOUT " + toString prev);
   };
-  tree = adios root {};
+
+  module = adios.lib.inject [ base injection ];
+  tree = adios module {};
 in
-(tree.modules.age-module {}) == ''
+tree {} == ''
   You are 20 years old.
-  Someday, you will be 21 years old.
+  Someday, you will be ABOUT 21 years old.
 ''
 ```
 
-There are some quirks of this that should be noted.
-
-1. It only works if each element is a _set_ of modules, not a module itself.
-```nix
-# this doesn't work with the advanced form
-adios.lib.inject [
-  module
-  injection
-]
-
-# this works
-adios.lib.inject [
-  { module = module; }
-  { module = injection; }
-]
-```
-
-2. It works recursively.
-```nix
-# this works
-adios.lib.inject [
-  { foo.modules.bar = module; }
-  { foo.modules.bar = injection; }
-]
-```
-
-3. As this behavior is specific to Adios module sets, it's recommended to use `lib.recursiveUpdate` for generic attrset updates.
+Let's take a look at how this works. When `adios.lib.inject` is called, `options.age.default` was _not_ a promise -- so
+the `prev:` function can be resolved immediately, and `20` is returned. But `age-someday` is more interesting. Since the
+original value was a promise, we don't know what `prev` is until the original promise is resolved. So `promise.map`
+instead returns a _new_ promise that wraps the original promise. Upon evaluating the injected module with Adios, the
+promises will be resolved recursively.
