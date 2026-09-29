@@ -120,13 +120,10 @@ let
       firstCharacter = substring 0 1;
       selectModule = foldl' (
         module: tok:
-        if module ? modules.${tok} then
-          module.modules.${tok}
-        else
-          throw ''
-            Module path `${tok}` is not a child module of `${module.path}`.
-            Valid children of `${module.path}`: ${printList (attrNames module.modules)}
-          ''
+        module.modules.${tok} or (throw ''
+          Module path `${tok}` is not a child module of `${module.path}`.
+          Valid children of `${module.path}`: ${printList (attrNames module.modules)}
+        '')
       ) tree;
     in
     current: relpath:
