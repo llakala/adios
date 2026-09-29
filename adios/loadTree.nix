@@ -403,7 +403,6 @@ let
                 options =
                   computeOptions {
                     inherit self args;
-                    inherit (self) options;
                     errorContext = "while calling";
                     params =
                       if evalParams ? ${self.path} then
