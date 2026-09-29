@@ -149,12 +149,12 @@ let
   explainFirstFailingFunction =
     # each element returns true/false
     verifiers:
-    # each element generates a custom error message
-    explainers:
+    # each element contains a custom error message
+    explanations:
     # the value to be checked
     v:
     let
-      recurse = i: if (elemAt verifiers i) v then recurse (i + 1) else (elemAt explainers i) v;
+      recurse = i: if (elemAt verifiers i) v then recurse (i + 1) else elemAt explanations i;
     in
     recurse 0;
 
@@ -662,33 +662,37 @@ fix (self: {
                 notOfType "attrs" v
               else
                 let
-                  explainers =
+                  explanations =
                     map (
                       attr:
                       let
                         type = types.${attr};
                       in
                       if type.__optional or (!total) then
-                        v: "in member '${attr}': ${type.explain v.${attr}}"
+                        "in member '${attr}': ${type.explain v.${attr}}"
+                      else if !v ? ${attr} then
+                        "missing member '${attr}'"
                       else
-                        v:
-                        if !v ? ${attr} then
-                          "missing member '${attr}'"
-                        else
-                          "in member '${attr}': ${type.explain v.${attr}}"
+                        "in member '${attr}': ${type.explain v.${attr}}"
                     ) names
-                    ++ optionalElem (!unknown) (
-                      v:
-                      "keys [${joinKeys (attrNames (removeAttrs v names))}] are unrecognized, expected keys are [${joinKeys names}]"
-                    )
-                    ++ optionalElem (verify != null) (
-                      if explain != null then
-                        explain
+                    ++ (
+                      if unknown then
+                        [ ]
                       else
-                        v: "custom verification function failed on value '${toPretty v}'"
+                        [
+                          "keys [${joinKeys (attrNames (removeAttrs v names))}] are unrecognized, expected keys are [${joinKeys names}]"
+                        ]
+                    )
+                    ++ (
+                      if verify == null then
+                        [ ]
+                      else if explain == null then
+                        [ "custom verification function failed on value '${toPretty v}'" ]
+                      else
+                        [ (explain v) ]
                     );
                 in
-                explainFirstFailingFunction verifiers explainers v
+                explainFirstFailingFunction verifiers explanations v
             );
         }
         // {
@@ -754,8 +758,9 @@ fix (self: {
               i:
               let
                 type = elemAt types i;
+                tupleElem = elemAt tuple i;
               in
-              v: "in element ${toString i} of type '${name}': ${type.explain (elemAt v i)}"
+              "in element ${toString i} of type '${name}': ${type.explain tupleElem}"
             ) len;
           in
           explainFirstFailingFunction verifiers explainers tuple;
