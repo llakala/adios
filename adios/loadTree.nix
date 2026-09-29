@@ -16,6 +16,7 @@ let
     listToAttrs
     mapAttrs
     seq
+    split
     substring
     tail
     unsafeGetAttrPos
@@ -114,8 +115,9 @@ let
   # Get a module by its / delimited path from the given current path
   fetchModuleByPath =
     let
-      split = builtins.split "/";
-      splitOnSlashes = s: filter isString (split s);
+      splitOnSlashes = split "/";
+      filterStrings = filter isString;
+      firstCharacter = substring 0 1;
       selectModule = foldl' (
         module: tok:
         if module ? modules.${tok} then
@@ -135,9 +137,11 @@ let
       selectModule (
         # path axiomatically always starts with a slash
         tail (
-          splitOnSlashes (
-            # get path relative to the current directory
-            if substring 0 1 relpath == "/" then relpath else toString (/. + current + "/${relpath}")
+          filterStrings (
+            splitOnSlashes (
+              # get path relative to the current directory
+              if firstCharacter relpath == "/" then relpath else toString (/. + current + "/${relpath}")
+            )
           )
         )
       );
