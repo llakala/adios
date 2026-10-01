@@ -27,8 +27,8 @@ let
         inherit type;
         description = string;
         default = any;
-        defaultFunc = function;
-        mutatorType = type; # TODO: remove
+        defaultFunc = function; # deprecated
+        mutatorType = type; # deprecated
         mergeFunc = function;
         mutators = listOf string;
         example = any;
@@ -40,16 +40,12 @@ let
           verify =
             option:
             option ? type
-            # at least one of these must be false
-            && (!option ? default || !option ? defaultFunc)
             # if mutators are set, then these must be
             && (!option ? mutators || option ? mergeFunc);
           explain =
             option:
             if !option ? type then
               "missing member 'type'"
-            else if option ? default && option ? defaultFunc then
-              "'default' & 'defaultFunc' are mutually exclusive"
             else
               "if 'mutators' are specified, 'mergeFunc' must be as well";
         };

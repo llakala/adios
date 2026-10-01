@@ -20,14 +20,15 @@ let
     split
     substring
     tail
-    unsafeGetAttrPos
     ;
 
   warn = builtins.warn or builtins.trace;
 
   optionals = cond: list: if cond then list else [ ];
 
-  # call a function with only its supported attributes
+  # call a function/promise with only its supported attributes
+  # we call a bunch of functions with the same args, and re-call one function with
+  # lots of different args. partially apply for both cases!
   callFunctionWith = args: fn: fn (intersectAttrs (functionArgs fn) args);
   callCachedFunction =
     fn:
@@ -35,10 +36,6 @@ let
       intersectFargs = intersectAttrs (functionArgs fn);
     in
     args: fn (intersectFargs args);
-
-  # variant of the callFunction algorithm.
-  # for promise.map to work, the new promise needs to declare the same
-  # functionArgs as the old promise
   callPromiseWith =
     args: promise:
     promise.resolve (intersectAttrs (promise.__promiseArgs or (functionArgs promise.resolve)) args);
@@ -50,13 +47,6 @@ let
     args: promise.resolve (intersectFargs args);
 
   printList = list: "[${concatStringsSep ", " list}]";
-
-  addWarningWithLocation =
-    attrs: name: message:
-    let
-      loc = unsafeGetAttrPos name attrs;
-    in
-    if loc == null then x: x else warn "${message} in ${loc.file}:${toString loc.line}";
 
   # Lazy type check an attrset
   checkModuleAttributes =
@@ -115,7 +105,7 @@ let
           [ ]
       ) (attrNames options)
     );
-  messages = import ./messages.nix { inherit printList warn; };
+  messages = import ./messages.nix { inherit printList; };
 in
 # Self-reference for the result of this file
 tree:
@@ -218,11 +208,14 @@ let
             "${errorPrefix} '${self.path}': in mutator '${resolution.path}' of option '${name}'"
             (
               check (
-                # TODO: deprecate the function form, warn temporarily
-                if isFunction mutations.${name} then
-                  callFunctionWith args' mutations.${name}
-                else if mutations.${name}.__adiosPromise or false then
+                if mutations.${name}.__adiosPromise or false then
                   callPromiseWith args' mutations.${name}
+                else if isFunction mutations.${name} then
+                  seq messages.mutationFunctionWarning (
+                    warn "mutation was function in ${self.path}.mutations.${mutatorPath}.${name}" (
+                      callFunctionWith args' mutations.${name}
+                    )
+                  )
                 else
                   mutations.${name}
               )
@@ -257,8 +250,6 @@ let
       errorPrefix ? "in",
       # parameters given explicitly in eval/impl stage
       params ? { },
-      # calls the given function (pre-applied with `args`)
-      callFunction,
       # calls the given promise (pre-applied with `args`)
       callPromise,
     }:
@@ -310,7 +301,6 @@ let
             value = computeOptions {
               inherit
                 args
-                callFunction
                 callPromise
                 errorPrefix
                 self
@@ -329,7 +319,21 @@ let
               value = addErrorContext errorMessage (option.type.check params.${name});
             }
           ]
-        # Default value
+        else if option ? defaultFunc then
+          (
+            v:
+            if option ? default then
+              seq messages.defaultFuncAndDefaultWarning (warn "defaultFunc AND default in ${self.path}.${name}" v)
+            else
+              seq messages.defaultFuncOnlyWarning (warn "defaultFunc in ${self.path}.${name}" v)
+          )
+            [
+              {
+                inherit name;
+                value = addErrorContext errorMessage (option.type.check (callFunctionWith args option.defaultFunc));
+              }
+            ]
+        # default value
         else if option ? default then
           [
             {
@@ -339,14 +343,6 @@ let
                   if option.default.__adiosPromise or false then callPromise option.default else option.default
                 )
               );
-            }
-          ]
-        # Computed default value
-        else if option ? defaultFunc then
-          [
-            {
-              inherit name;
-              value = addErrorContext errorMessage (option.type.check (callFunction option.defaultFunc));
             }
           ]
         else
@@ -365,15 +361,20 @@ let
         ${if self ? __functor then "__functor" else null} = self.__functor;
       };
 
-      # we call a bunch of functions with the module's args, and re-call the
-      # result with lots of different args. partially apply for both cases!
-      callFunction = callFunctionWith args;
       callResultWith =
-        if def ? result then
-          assert !def ? impl;
-          if def.result.__adiosPromise or false then callCachedPromise def.result else _: def.result
+        if def ? impl then
+          (
+            v:
+            if def ? result then
+              seq messages.implAndResultWarning (warn "impl AND result in ${self.path}" v)
+            else
+              seq messages.implOnlyWarning (warn "impl in ${self.path}" v)
+          )
+            (callCachedFunction def.impl)
+        else if def.result.__adiosPromise or false then
+          callCachedPromise def.result
         else
-          callCachedFunction def.impl;
+          _: def.result;
 
       # cache the equivalent of calling `module {}`
       # uses self.args to also run assertions
@@ -388,15 +389,13 @@ let
               fetchInput self inputData.from
             else
               seq messages.modulePathWarning (
-                addWarningWithLocation inputData "path" "deprecated module path" (
-                  fetchModuleByPath self.path inputData.path
-                )
+                warn "deprecated module path in ${self.path}" (fetchModuleByPath self.path inputData.path)
               )
           ).args.options
         ) self.inputs;
         options =
           computeOptions {
-            inherit self callFunction args;
+            inherit self args;
             callPromise = callPromiseWith args;
             ${if evalParams ? ${self.path} then "params" else null} = evalParams.${self.path};
           }
@@ -428,7 +427,8 @@ let
         ${if def ? assertions && def.assertions != [ ] then "assertions" else null} =
           addErrorContext "${errorPrefix}: in attribute 'assertions'" (checkAssertions def.assertions);
 
-        args = if !self ? assertions then args else runAssertionsAndDefine callFunction self args;
+        args =
+          if !self ? assertions then args else runAssertionsAndDefine (callFunctionWith args) self args;
 
         ${if def ? result || def ? impl then "__functor" else null} =
           _: implParams:
@@ -437,7 +437,6 @@ let
             cachedResult
           else
             let
-              callFunction = callFunctionWith recomputedArgs;
               # recompute args fixpoint with the passed params
               recomputedArgs = {
                 # inherit args, not self.args, so assertions are only computed
@@ -445,7 +444,7 @@ let
                 inherit (args) inputs;
                 options =
                   computeOptions {
-                    inherit self callFunction;
+                    inherit self;
                     args = recomputedArgs;
                     callPromise = callPromiseWith recomputedArgs;
                     errorPrefix = "while calling";
@@ -463,7 +462,7 @@ let
             if !self ? assertions then
               callResultWith recomputedArgs
             else
-              runAssertionsAndCall callFunction self (callResultWith recomputedArgs);
+              runAssertionsAndCall (callFunctionWith recomputedArgs) self (callResultWith recomputedArgs);
       };
     in
     assert isAttrs def || messages.mkBadDefError self.path def;

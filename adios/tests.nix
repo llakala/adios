@@ -3,7 +3,6 @@ let
   inherit (builtins)
     deepSeq
     foldl'
-    isFunction
     mapAttrs
     substring
     ;
@@ -53,7 +52,18 @@ mapAttrs testModules {
   basic = {
     testCalling = {
       module = {
-        impl = { options }: true;
+        result = true;
+      };
+      expected = true;
+    };
+
+    testDefaultWorks = {
+      module = {
+        options.test = {
+          type = types.bool;
+          default = true;
+        };
+        result = promise ({ options }: options.test);
       };
       expected = true;
     };
@@ -62,14 +72,14 @@ mapAttrs testModules {
       module = {
         options.foo.type = types.bool;
         options.bar.type = types.bool;
-        impl = { options }: builtins.seq options true;
+        result = promise ({ options }: builtins.seq options true);
       };
       apply = module: module { baz = false; };
       expectedError.msg = "while calling /: tried to set nonexistent option 'baz', valid options were '\\[bar, foo\\]'";
     };
 
     testBadModuleType = {
-      module = adios: { impl = _: true; };
+      module = adios: { result = true; };
       apply = tree: tree;
       expectedError.msg = ''
         in module '/': module is of type 'function', but Adios modules should be attrsets.
@@ -83,7 +93,7 @@ mapAttrs testModules {
           default = 0;
           type = types.string;
         };
-        impl = { options }: options.test;
+        result = promise ({ options }: options.test);
       };
       expectedError.msg = "value '0' is not of type 'string'";
     };
@@ -101,50 +111,12 @@ mapAttrs testModules {
           func1 = a: true;
           nested.func2 = b: false;
         };
-        mutations."/some-module".some-option = _: true;
-        impl = _: true;
+        mutations."/some-module".some-option = true;
+        result = true;
       };
       apply = tree: deepSeq tree true;
       expected = true;
     };
-  };
-
-  default = {
-    testDefaultWorks = {
-      module = {
-        options.test = {
-          type = types.bool;
-          default = true;
-        };
-        impl = { options }: options.test;
-      };
-      expected = true;
-    };
-
-    testDefaultFuncWorks = {
-      module = {
-        options.test = {
-          type = types.bool;
-          defaultFunc = { inputs }: true;
-        };
-        impl = { options }: options.test;
-      };
-      expected = true;
-    };
-
-    # default and defaultFunc are expected to be disjoint
-    testInvalidTogether = {
-      module = {
-        options.test = {
-          type = types.bool;
-          default = true;
-          defaultFunc = { inputs }: true;
-        };
-        impl = { options }: options.test;
-      };
-      expectedError.msg = "in struct 'option': 'default' & 'defaultFunc' are mutually exclusive";
-    };
-
   };
 
   inputs = {
@@ -156,26 +128,27 @@ mapAttrs testModules {
             default = 1;
             type = types.int;
           };
-          impl = _: true;
+          result = true;
         };
-        impl =
+        result = promise (
           { inputs }:
           assert inputs.test.option == 1;
-          inputs.test { };
+          inputs.test { }
+        );
       };
       expected = true;
     };
 
     testParent = {
       modules = {
-        mod1.impl = _: true;
-        mod2.impl = _: true;
+        mod1.result = true;
+        mod2.result = true;
         test = {
           inputs = {
             mod1.from = { parent }: parent.mod1;
             mod2.from = { parent }: parent.mod2;
           };
-          impl = { inputs }: (inputs.mod1 { }) && (inputs.mod2 { });
+          result = promise ({ inputs }: (inputs.mod1 { }) && (inputs.mod2 { }));
         };
       };
       apply = tree: tree.modules.test { };
@@ -185,8 +158,8 @@ mapAttrs testModules {
     testRoot = {
       module = {
         inputs.test.from = { root }: root.test;
-        modules.test.impl = _: true;
-        impl = { inputs }: inputs.test { };
+        modules.test.result = true;
+        result = promise ({ inputs }: inputs.test { });
       };
       expected = true;
     };
@@ -202,8 +175,8 @@ mapAttrs testModules {
             self,
           }:
           root.test;
-        modules.test.impl = _: true;
-        impl = { inputs }: inputs.test { };
+        modules.test.result = true;
+        result = promise ({ inputs }: inputs.test { });
       };
       expected = true;
     };
@@ -211,12 +184,12 @@ mapAttrs testModules {
     testNoParentOfRoot = {
       module = {
         inputs.parentOfRoot.from = { parent }: parent;
-        impl = { inputs }: inputs.parentOfRoot;
+        result = promise ({ inputs }: inputs.parentOfRoot);
       };
       expectedError.msg = "Attempted to access parent of root module, but the root module has no parent!";
     };
 
-    # calling `options {}` calls the impl, just like calling `inputs.foo {}`
+    # calling `options {}` calls the module, just like calling `inputs.foo {}`
     # would
     testCallingOwnImpl = {
       module = {
@@ -226,7 +199,7 @@ mapAttrs testModules {
             default = false;
           };
         };
-        impl = { options }: if options.ranOnce then true else options { ranOnce = true; };
+        result = promise ({ options }: if options.ranOnce then true else options { ranOnce = true; });
       };
       expected = true;
     };
@@ -247,12 +220,12 @@ mapAttrs testModules {
             default = true;
           };
         };
-        impl = { options }: options.called;
+        result = promise ({ options }: options.called);
       };
       expected = true;
     };
 
-    # Options without a default or impl-stage value shouldn't be included in the
+    # Options without a default or passed value shouldn't be included in the
     # options attrset
     testNoValueOption = {
       module = {
@@ -261,10 +234,11 @@ mapAttrs testModules {
             type = types.string;
           };
         };
-        impl =
+        result = promise (
           { options }:
           assert !options ? noDefault;
-          true;
+          true
+        );
       };
       expected = true;
     };
@@ -274,17 +248,17 @@ mapAttrs testModules {
     testValid = {
       modules = {
         mutator1 = {
-          mutations."/getsMutated".test = _: 1;
+          mutations."/getsMutated".test = 1;
         };
         mutator2 = {
-          mutations."/getsMutated".test = _: 2;
+          mutations."/getsMutated".test = 2;
         };
         mutator3 = {
-          mutations."/getsMutated".test = _: 3;
+          mutations."/getsMutated".test = promise (_: 3);
         };
         # this isn't in the mutators list, so it's completely ignored
         unsetMutator = {
-          mutations."/getsMutated".test = _: 100;
+          mutations."/getsMutated".test = 100;
         };
         getsMutated = {
           options.test = {
@@ -297,15 +271,15 @@ mapAttrs testModules {
             # add the values
             mergeFunc = { mutators }: foldl' (acc: v: acc + v) 0 mutators;
           };
-          impl = { options }: options.test;
+          result = promise ({ options }: options.test);
         };
       };
       apply = tree: tree.modules.getsMutated { };
       expected = 6;
     };
 
-    # when mutating own module, options set in the impl stage should be
-    # propagated to the mutation, rather than using the old args fixpoint
+    # when mutating own module, options set while calling should be propagated
+    # to the mutation, rather than using the old args fixpoint
     testMutationOfOwnModule = {
       module = {
         options.mutatedOption = {
@@ -316,8 +290,8 @@ mapAttrs testModules {
         options.implStageOption = {
           type = types.string;
         };
-        mutations."/".mutatedOption = { options }: [ options.implStageOption ];
-        impl = { options }: options.mutatedOption;
+        mutations."/".mutatedOption = promise ({ options }: [ options.implStageOption ]);
+        result = promise ({ options }: options.mutatedOption);
       };
       apply = tree: tree { implStageOption = "demo"; };
       expected = [ "demo" ];
@@ -330,7 +304,7 @@ mapAttrs testModules {
           type = types.bool;
           mutators = [ ];
         };
-        impl = { options }: options.foo;
+        result = promise ({ options }: options.foo);
       };
       expectedError.msg = "in struct 'option': if 'mutators' are specified, 'mergeFunc' must be as well";
     };
@@ -343,7 +317,7 @@ mapAttrs testModules {
           type = types.string;
           default = "hello world";
         };
-        impl = { options }: options.test;
+        result = promise ({ options }: options.test);
       };
       evalParams = {
         options."/".test = "goodbye world";
@@ -365,13 +339,13 @@ mapAttrs testModules {
             field2.default = true;
           };
         };
-        impl = { options }: options.test.field1 && options.test.field2;
+        result = promise ({ options }: options.test.field1 && options.test.field2);
       };
       expected = true;
     };
 
-    # submodules must only provide the `options` field, no `type`,
-    # `defaultFunc`, etc
+    # submodules must only provide the `options` field, no `type` / `default`
+    # allowed
     testNoOtherFieldsAllowed = {
       module = {
         options.test = {
@@ -379,7 +353,7 @@ mapAttrs testModules {
           default = 5;
           options.subfield.type = types.bool;
         };
-        impl = { options }: options.test;
+        result = promise ({ options }: options.test);
       };
       expectedError.msg = "in struct 'subOptions': keys \\['default', 'type'\\] are unrecognized, expected keys are \\['description', 'example', 'options'\\]";
     };
@@ -390,7 +364,7 @@ mapAttrs testModules {
       module = adios.lib.inject [
         {
           options.test.type = types.bool;
-          impl = { options }: options.test;
+          result = promise ({ options }: options.test);
         }
         {
           options.test.default = true;
@@ -406,7 +380,7 @@ mapAttrs testModules {
             type = types.int;
             default = 10;
           };
-          impl = { options }: options.test;
+          result = promise ({ options }: options.test);
         }
         {
           options.test.default = promise.map (prev: prev + 1);

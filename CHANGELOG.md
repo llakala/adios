@@ -1,11 +1,88 @@
 Any new features or breaking changes will be listed here.
 
+# Promises deprecations
+
+Attributes like `defaultFunc` and `impl` have been deprecated in favor of their promise equivalents. Similarly,
+`mutations` now expects a promise to allow reading from `args`. If you're not familiar with promises, see [this
+changelog entry](#promises).
+
+Here's an example of how modules should be migrated:
+```nix
+{ types, promise, ... }:
+{
+  options = {
+    some-option = {
+      type = types.int;
+      defaultFunc = { inputs }: options.option-a + 1; # before
+      default = promise ({ inputs }: options.option-a + 1); # after
+    };
+  };
+
+  impl = { options }: options.option-2 - options.option-1); # before
+  result = promise ({ options }: options.option-2 - options.option-1); # after
+
+  mutations = {
+    "/foo".bar = { options }: [ options.option-1 ]; # before
+    "/foo".bar = promise ({ options }: [ options.option-1 ]); # after
+  };
+}
+```
+
+It's worth noting that, similar to `default`, you can assign a constant value to `result` and
+`mutations.$module.$option` if you _don't_ need a promise. So this works:
+```nix
+{
+  mutations."/foo".bar = [ 1 2 3 ];
+  result = null;
+}
+```
+
+Such major deprecations require some care. If a user injects into an option's `defaultFunc`, and the option has been
+migrated upstream to a `default`, then the injection will still apply, and _both_ attributes will be specified. To
+prevent this from throwing a confusing error, if `defaultFunc` _and_ `default` are specified, Adios will assume that the
+`defaultFunc` was your desired result, and choose it instead. However, this is only for clearly reporting the locations
+of errors, and both modules and injections should be migrated. The same logic applies for `impl` and `result`.
+
+Updating `mutations` to use promises is more difficult. Unlike `default` and `impl`, the value of a mutation isn't
+underneath a sub-attribute, and `mutations` is already an accurate name that we'd prefer not to change. But if we now
+accept constant values in a mutation, what if the option you're mutating takes `types.function`? Then doing:
+```nix
+{
+  mutations."/foo".bar = x: x + 1;
+}
+```
+will trigger the warning incorrectly. Without some unclear heuristics, Adios can't tell this apart from the deprecated
+function form that reads from `args`. Therefore, to use a function in a mutation, a promise can be used to disambiguate.
+```nix
+{
+  mutations."/foo".bar = promise (
+    {}:
+    # return a function
+    (x: x + 1)
+  );
+}
+```
+In the distant future, we may relax our API contract and prevent edge cases like this.
+
+
 # Promises
 
-Adios now uses "promises" to express that a value needs the current module's args (think `{ inputs, options }:`) to be
+Adios now uses "promises" to express that a value needs the module's args (think `{ inputs, options }:`) to be
 computed.
 
-Here's an example of how promises can be used:
+The `promise` function returns a special sentinel data structure that tells Adios "I need the module's args. Once you
+pass them, I'll return this option's value". If you've used `defaultFunc` / `impl`, this may be familar. However, this
+new model allows for much more powerful injections with `promise.map` (see the [docs](./doc/src/lib/inject/index.md)).
+
+Adios supports using promises with:
+- `options.$option.default`
+- the new top-level `result` attribute (disjoint with `impl`)
+- `mutations.$module.$option`
+
+It's worth noting that promises are _only_ needed when you actually need the module's args. `default`, `result`, and
+`mutations.$module.$option` support constant values.
+
+Here's an example of a module that uses promises:
 
 ```nix
 { types, promise, ... }:
@@ -22,20 +99,13 @@ Here's an example of how promises can be used:
   };
 
   mutations = {
-    "/foo".bar = promise ({ options }: [ options.option-1 ]);
+    "/module-a".option-3 = 5;
+    "/module-b".option-4 = promise ({ options }: [ options.option-1 ]);
   };
 
   result = promise ({ options }: options.option-2 - options.option-1);
 }
 ```
-The `promise` function returns a special sentinel data structure that tells Adios "I need the module's args. Once you
-pass them, I'll return this option's value". If you've used `defaultFunc` / `impl`, this may be familar. However, this
-new model allows for much more powerful injections with `promise.map` (see the [docs](./doc/src/lib/inject/index.md)).
-
-Adios supports using promises with:
-- `options.$option.default`
-- the new top-level `result` attribute (disjoint with `impl`)
-- `mutations.$module.$option`
 
 In the future, `defaultFunc`, `impl`, and non-promise `mutations.$module.option` will be deprecated. Now is a good
 time to port your modules to use the promise APIs instead.
