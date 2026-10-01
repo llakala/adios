@@ -22,8 +22,7 @@ let
       if !isAttrs rhs then
         # can't recurse, not awaiting. rhs wins
         rhs
-      else
-      if rhs.__adiosAwaiting or false then
+      else if rhs.__adiosAwaiting or false then
         # awaiting a previous value to inject into it
         if (lhs.__adiosPromise or false) then
           # left side is a promise, create a new promise that calls the old one
