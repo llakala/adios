@@ -102,6 +102,7 @@ let
     isString
     length
     mapAttrs
+    partition
     seq
     ;
   warn = builtins.warn or builtins.trace;
@@ -667,18 +668,37 @@ fix (self: {
         types: total: unknown: verify:
         let
           names = attrNames types;
+          partioned = partition (name: types.${name}.__optional or false) names;
           verifiers =
-            map (
+            (
+              if unknown then
+                [ ]
+              else if partioned.right == [ ] then
+                [ (v: attrNames v == names) ]
+              else
+                [ (v: removeAttrs v names == { }) ]
+            )
+            ++ map (
               name:
               let
                 inherit (types.${name}) verify;
               in
-              if types.${name}.__optional or false then
-                v: !v ? ${name} || verify v.${name}
-              else
+              # optional types don't have to be specified
+              v: !v ? ${name} || verify v.${name}
+            ) partioned.right
+            ++ map (
+              name:
+              let
+                inherit (types.${name}) verify;
+              in
+              if unknown then
                 v: v ? ${name} && verify v.${name}
-            ) names
-            ++ (if unknown then [ ] else [ (v: removeAttrs v names == { }) ])
+              else
+                # when unknown = false, the first verifier guarantees that all
+                # specified names are unknown, so no need to use ? and check it
+                # again
+                v: verify v.${name}
+            ) partioned.wrong
             ++ (if verify == null then [ ] else [ verify ]);
         in
         v: isAttrs v && all (verifier: verifier v) verifiers;

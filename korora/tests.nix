@@ -462,6 +462,13 @@ lib.fix (
           expected = null;
         };
 
+        testUnknownMissingAttribute = {
+          expr = testStructUnknown.inspect {
+            bar = "foo";
+          };
+          expected = "in struct 'test1': missing member 'foo'";
+        };
+
         testUnknownNonTotal = {
           expr = testStructNonTotalUnknown.inspect {
             bar = null;
