@@ -416,9 +416,18 @@ lib.fix (
               explain = v: "VERBOTEN";
             };
 
+        testStruct3 = types.struct "test3" { };
+
         testStructNonTotal = testStruct.override { total = false; };
         testStructUnknown = testStruct.override { unknown = true; };
-        testStructNonTotalUnknown = testStruct2.override { total = false; unknown = true; };
+        testStructNonTotalUnknown = testStruct2.override {
+          total = false;
+          unknown = true;
+        };
+        testStructEmptyNonTotalUnknown = testStruct3.override {
+          total = false;
+          unknown = true;
+        };
       in
       {
         testValid = {
@@ -473,6 +482,11 @@ lib.fix (
           expr = testStructNonTotalUnknown.inspect {
             bar = null;
           };
+          expected = null;
+        };
+
+        testEmptyUnknownNonTotal = {
+          expr = testStructEmptyNonTotalUnknown.inspect { };
           expected = null;
         };
 
